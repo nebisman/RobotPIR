@@ -59,8 +59,9 @@ B = (inercia/r) .* [0.0   0.0;
                     0.0   0.0;
                     B_61  B_62]
 
-C = Matrix{Float64}(I, 6, 6)
-D = zeros(6, 2)
+C = [1.0 0.0 0.0 0.0 0.0 0.0;
+     0.0 0.0 0.0 0.0 1.0 0.0]
+D = zeros(2, 2)
 
 sys = ss(A, B, C, D)
 
@@ -70,11 +71,11 @@ sys = ss(A, B, C, D)
 
 # Penalización de desviación de estados Q (6x6)
 Q_lqr = diagm([
-    1000.0,   # [1] Posición X (m)
-    500.0,  # [2] Velocidad lineal X (m/s)
-    200.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
-    5000.0,  # [4] Velocidad angular Pitch (rad/s)
-    50.0,    # [5] Ángulo Yaw / Orientación (rad)
+    7700.0,   # [1] Posición X (m)
+    10.0,  # [2] Velocidad lineal X (m/s)
+    0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
+    1600.0,  # [4] Velocidad angular Pitch (rad/s)
+    4000.0,    # [5] Ángulo Yaw / Orientación (rad)
     0.0      # [6] Velocidad angular Yaw (rad/s)
 ])
 
@@ -84,10 +85,19 @@ R_lqr = [
     0.0  1.0
 ]
 
+    Q = [7700 0 0 0 0 0; 0 0 0 0 0 0; 0 0 0 0 0 0; 0 0 0 1600 0 0; 0 0 0 0 500 0; 0 0 0 0 0 0];
+    R = [1 0; 0 1];
+
 # Cálculo de la matriz K de ganancias LQR (Matriz de 2x6)
-K_matrix = lqr(sys, Q_lqr, R_lqr)
+Klqr = lqr(sys, Q_lqr, R_lqr)
+
+Kr =  -(C * inv(A - B*Klqr) * B)
+
+
 
 # ==============================================================================
 # 🚀 4. DESPLIEGUE EN HARDWARE (Alt + Enter)
 # ==============================================================================
-desplegar_controlador(K_matrix)
+include("lqr_pipeline.jl")
+
+desplegar_controlador(Klqr, Kr)
