@@ -1,0 +1,64 @@
+cmsis-tools-environment:
+  version: 1.0.0
+  generated-by: arm.cmsis-csolution version 1.72.0
+  solution: ../LQR.csolution.yml
+  environment:
+    path:
+      - /home/leonardo/.vscode/extensions/arm.vscode-cmsis-debugger-1.10.1-linux-x64/tools/pyocd
+      - /home/leonardo/.vscode/extensions/arm.cmsis-csolution-1.72.0-linux-x64/tools/cmsis-toolbox/bin
+      - /home/leonardo/.vcpkg/artifacts/2139c4c6/tools.kitware.cmake/3.31.12/bin
+      - /home/leonardo/.vcpkg/artifacts/2139c4c6/tools.ninja.build.ninja/1.13.2
+      - /home/leonardo/.vcpkg/artifacts/2139c4c6/compilers.arm.armclang/6.24.0/bin
+      - /home/leonardo/.vscode/extensions/arm.vscode-cmsis-debugger-1.10.1-linux-x64/tools/gdb/bin
+    variables:
+      cmake: /home/leonardo/.vcpkg/artifacts/2139c4c6/tools.kitware.cmake/3.31.12/bin/cmake
+      cmake_gui: /home/leonardo/.vcpkg/artifacts/2139c4c6/tools.kitware.cmake/3.31.12/bin/cmake-gui
+      ctest: /home/leonardo/.vcpkg/artifacts/2139c4c6/tools.kitware.cmake/3.31.12/bin/ctest
+      ninja: /home/leonardo/.vcpkg/artifacts/2139c4c6/tools.ninja.build.ninja/1.13.2/ninja
+      AC6_TOOLCHAIN_6_24_0: /home/leonardo/.vcpkg/artifacts/2139c4c6/compilers.arm.armclang/6.24.0/bin/
+  tools:
+    - name: pyOCD
+      version: v0.46.1
+      origin: built-in
+      provider:
+        type: vscode-extension
+        id: arm.vscode-cmsis-debugger
+      directory: /home/leonardo/.vscode/extensions/arm.vscode-cmsis-debugger-1.10.1-linux-x64/tools/pyocd
+      manual: https://pyocd.io/docs/
+    - name: CMSIS-Toolbox
+      version: 2.15.0
+      origin: built-in
+      provider:
+        type: vscode-extension
+        id: arm.cmsis-csolution
+      directory: /home/leonardo/.vscode/extensions/arm.cmsis-csolution-1.72.0-linux-x64/tools/cmsis-toolbox/bin
+      manual: https://open-cmsis-pack.github.io/cmsis-toolbox/
+    - name: tools.kitware.cmake
+      version: 3.31.12
+      origin: installed
+      provider:
+        type: vcpkg
+        id: arm.environment-manager
+      directory: /home/leonardo/.vcpkg/artifacts/2139c4c6/tools.kitware.cmake/3.31.12
+    - name: tools.ninja.build.ninja
+      version: 1.13.2
+      origin: installed
+      provider:
+        type: vcpkg
+        id: arm.environment-manager
+      directory: /home/leonardo/.vcpkg/artifacts/2139c4c6/tools.ninja.build.ninja/1.13.2
+    - name: compilers.arm.armclang
+      version: 6.24.0
+      origin: installed
+      provider:
+        type: vcpkg
+        id: arm.environment-manager
+      directory: /home/leonardo/.vcpkg/artifacts/2139c4c6/compilers.arm.armclang/6.24.0
+    - name: Arm GNU GDB
+      version: 15.3.1
+      origin: built-in
+      provider:
+        type: vscode-extension
+        id: arm.vscode-cmsis-debugger
+      directory: /home/leonardo/.vscode/extensions/arm.vscode-cmsis-debugger-1.10.1-linux-x64/tools/gdb/bin
+      manual: https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain

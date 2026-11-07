@@ -1,0 +1,159 @@
+project:
+  output:
+    type:
+      - hex
+      - elf
+  packs:
+    - pack: Keil::STM32F1xx_DFP@^2.4.1
+  setups:
+    - setup: Options for LQR
+      add-path:
+        - .
+        - ../CMSIS
+        - ../FWLib/inc
+        - ../BSP
+        - ../BSP/Delay
+        - ../BSP/Enconder
+        - ../BSP/IIC_Software
+        - ../BSP/Motor
+        - ../BSP/MPU6050
+        - ../BSP/MPU6050/DMP
+        - ../BSP/Usart1
+        - ../BSP/INT_Sever
+        - ../BSP/Battery
+        - ../APP
+        - ../APP/filter
+        - ../APP/KF
+        - ../APP/PID
+        - ../BSP/OLED
+        - ../BSP/Key
+        - ../BSP/Beep
+        - ../BSP/LED
+        - ../BSP/Timer
+        - ../BSP/Bluetooth
+        - ../BSP/Ultrasonic
+      debug: "on"
+      define:
+        - STM32F10X_HD
+        - USE_STDPERIPH_DRIVER
+        - __MICROLIB
+      define-asm:
+        - __MICROLIB
+      misc:
+        - C:
+            - -std=c99
+          C-CPP:
+            - -fno-rtti
+            - -funsigned-char
+            - -fshort-enums
+            - -fshort-wchar
+            - -ffunction-sections
+            - -Wno-packed
+            - -Wno-missing-variable-declarations
+            - -Wno-missing-prototypes
+            - -Wno-missing-noreturn
+            - -Wno-sign-conversion
+            - -Wno-nonportable-include-path
+            - -Wno-reserved-id-macro
+            - -Wno-unused-macros
+            - -Wno-documentation-unknown-command
+            - -Wno-documentation
+            - -Wno-license-management
+            - -Wno-parentheses-equality
+          CPP:
+            - -xc++
+            - -std=c++11
+            - -fno-exceptions
+          ASM:
+            - -masm=auto
+          Link:
+            - --library_type=microlib
+            - --map
+            - --load_addr_map_info
+            - --xref
+            - --callgraph
+            - --symbols
+            - --info sizes
+            - --info totals
+            - --info unused
+            - --info veneers
+            - --strict
+            - --summary_stderr
+            - --info summarysizes
+  linker:
+    - script: LQR_LQR.sct
+  groups:
+    - group: USER
+      files:
+        - file: main.c
+        - file: stm32f10x_it.c
+        - file: AllHeader.h
+        - file: myenum.h
+        - file: switch_function.h
+    - group: CMSIS
+      files:
+        - file: ../CMSIS/system_stm32f10x.c
+        - file: ../CMSIS/startup_stm32f10x_hd.s
+          misc:
+            - ASM:
+                - -masm=auto
+    - group: FWLIB
+      files:
+        - file: ../FWLib/src/misc.c
+        - file: ../FWLib/src/stm32f10x_adc.c
+        - file: ../FWLib/src/stm32f10x_bkp.c
+        - file: ../FWLib/src/stm32f10x_can.c
+        - file: ../FWLib/src/stm32f10x_cec.c
+        - file: ../FWLib/src/stm32f10x_crc.c
+        - file: ../FWLib/src/stm32f10x_dac.c
+        - file: ../FWLib/src/stm32f10x_dbgmcu.c
+        - file: ../FWLib/src/stm32f10x_dma.c
+        - file: ../FWLib/src/stm32f10x_exti.c
+        - file: ../FWLib/src/stm32f10x_flash.c
+        - file: ../FWLib/src/stm32f10x_fsmc.c
+        - file: ../FWLib/src/stm32f10x_gpio.c
+        - file: ../FWLib/src/stm32f10x_i2c.c
+        - file: ../FWLib/src/stm32f10x_iwdg.c
+        - file: ../FWLib/src/stm32f10x_pwr.c
+        - file: ../FWLib/src/stm32f10x_rcc.c
+        - file: ../FWLib/src/stm32f10x_rtc.c
+        - file: ../FWLib/src/stm32f10x_sdio.c
+        - file: ../FWLib/src/stm32f10x_spi.c
+        - file: ../FWLib/src/stm32f10x_tim.c
+        - file: ../FWLib/src/stm32f10x_usart.c
+        - file: ../FWLib/src/stm32f10x_wwdg.c
+    - group: BSP
+      files:
+        - file: ../BSP/Delay/delay.c
+        - file: ../BSP/Enconder/encoder.c
+        - file: ../BSP/IIC_Software/IOI2C.c
+        - file: ../BSP/Motor/motor.c
+        - file: ../BSP/MPU6050/mpu6050.c
+        - file: ../BSP/Usart1/usart.c
+        - file: ../BSP/bsp.c
+        - file: ../BSP/INT_Sever/intsever.c
+        - file: ../BSP/Battery/bsp_battery.c
+        - file: ../BSP/OLED/bsp_oled_i2c.c
+        - file: ../BSP/OLED/bsp_oled.c
+        - file: ../BSP/OLED/oled_fonts.c
+        - file: ../BSP/Beep/bsp_beep.c
+        - file: ../BSP/LED/bsp_LED.c
+        - file: ../BSP/Timer/bsp_timer.c
+        - file: ../BSP/Key/bsp_key.c
+        - file: ../BSP/Usart1/bsp_usart2.c
+        - file: ../BSP/Bluetooth/bsp_bluetooth.c
+        - file: ../BSP/Ultrasonic/bsp_ultrasonic.c
+    - group: APP
+      files:
+        - file: ../APP/app_control.c
+        - file: ../APP/app_motor.c
+        - file: ../APP/PID/pid_control.c
+        - file: ../BSP/Bluetooth/app_bluetooth.c
+    - group: DMP
+      files:
+        - file: ../BSP/MPU6050/DMP/inv_mpu.c
+        - file: ../BSP/MPU6050/DMP/inv_mpu_dmp_motion_driver.c
+    - group: algorithm_my
+      files:
+        - file: ../APP/filter/filter.c
+        - file: ../APP/KF/KF.c

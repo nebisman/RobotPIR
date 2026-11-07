@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Flashear Carro (Serial)",
+            "type": "process",
+            "command": "${workspaceFolder}/tools/stm32flash.exe",
+            "args": [
+                "-i",
+                "-dtr&rts&dtr&rts&rts&rts&rts&rts&rts&rts&rts&rts:-rts&-dtr",
+                "-w",
+                "${workspaceFolder}/out/LQR/LQR/LQR.hex",
+                "-v",
+                "-g",
+                "0x08000000",
+                "-b",
+                "115200",
+                "/dev/ttyUSB0"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

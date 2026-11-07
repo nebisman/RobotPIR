@@ -1,0 +1,13 @@
+CompileFlags:
+  CompilationDatabase: /home/leonardo/datos/share_desktop/2026-II/Control/control-material/guias
+    de laboratorio/practica 6/5.LQR/STM32_code/USER/out/LQR/LQR
+
+---
+If:
+  PathMatch: .*\.(c|C|h)$
+CompileFlags:
+  Add:
+    - -include
+    - /home/leonardo/datos/share_desktop/2026-II/Control/control-material/guias
+      de laboratorio/practica
+      6/5.LQR/STM32_code/USER/out/LQR/LQR/compile_macros_c.h

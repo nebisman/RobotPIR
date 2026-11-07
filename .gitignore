@@ -1,0 +1,27 @@
+# Artefactos de compilación (Keil / cbuild)
+OBJ/
+USER/out/
+USER/tmp/
+USER/Objects/
+USER/Listings/
+*.o
+*.d
+*.crf
+*.axf
+*.map
+*.lst
+*.htm
+*.dep
+*.bak
+*.iex
+*.__i
+*.tra
+*.lnp
+*.plg
+
+# Archivos de usuario/estado de Keil y VS Code
+*.uvguix.*
+JLinkLog.txt
+uv2csolution.log
+USER/.vscode/keil-assistant.log
+USER/.vscode/uv4.log.lock

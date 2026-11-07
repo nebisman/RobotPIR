@@ -1,0 +1,9 @@
+{
+    "targetSet": {
+        "LQR": {
+            "activeTargetType": "LQR"
+        }
+    },
+    "activeSolution": "../LQR.csolution.yml",
+    "activeTarget": "LQR"
+}

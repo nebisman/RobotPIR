@@ -1,0 +1,14 @@
+build-idx:
+  generated-by: csolution version 2.15.1+p3-gf46d68bf
+  csolution: LQR.csolution.yml
+  tmpdir: tmp
+  cprojects:
+    - cproject: LQR.cproject.yml
+  cbuilds:
+    - cbuild: out/LQR/LQR/LQR+LQR.cbuild.yml
+      project: LQR
+      configuration: +LQR
+      messages:
+        info:
+          - LQR.cbuild-pack.yml - file is already up-to-date
+          - LQR+LQR.cbuild.yml - file is already up-to-date

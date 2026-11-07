@@ -1,0 +1,16 @@
+{
+    "debug.hideSlowPreLaunchWarning": true,
+    "debug.showInStatusBar": "never",
+    "memory-inspector.addressPadding": "32bit",
+    "memory-inspector.groupings.groupsPerRow": "Autofit",
+    "memory-inspector.groupings.MAUsPerGroup": 4,
+    "memory-inspector.scrollingBehavior": "Auto-Append",
+    "clangd.arguments": [
+        "--compile-commands-dir=/home/leonardo/datos/share_desktop/2026-II/Control/control-material/guias de laboratorio/practica 6/5.LQR/STM32_code/USER/out/LQR/LQR"
+    ],
+    "cmsis-csolution.autoDebugLaunch": false,
+    "cmake.sourceDirectory": "C:/5.LQR/5.LQR/STM32_code/USER/tmp/LQR/default",
+    "stm32-for-vscode.openOCDPath": false,
+    "stm32-for-vscode.makePath": false,
+    "stm32-for-vscode.armToolchainPath": false
+}
