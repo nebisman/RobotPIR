@@ -86,7 +86,7 @@ end
 # ------------------------------------------------------------------------------
 # 2. GENERACIÓN DE C HEADER (lqr_gain.h)
 # ------------------------------------------------------------------------------
-function write_controller(K, Kr=0.0; filepath=nothing)
+function write_controller(K, Kr=zeros(2,2); filepath=nothing)
     
 
     if isnothing(filepath)
@@ -147,10 +147,11 @@ function write_controller(K, Kr=0.0; filepath=nothing)
         @printf(io, "#define K24_LQR    (%.10ff)  // Vel. Angular Pitch\n", K[1,4])
         @printf(io, "#define K25_LQR    (%.10ff)  // Ángulo Yaw\n",         0.0)
         @printf(io, "#define K26_LQR    (%.10ff)  // Vel. Angular Yaw\n", 0.0)      
-        @printf(io, "#define Kr11_LQR       (%.10ff)  // estado x \n", Kr[1])
-        @printf(io, "#define Kr12_LQR     (%.10ff)  // Ganancia de referencia de posición\n", 0.0)
-        @printf(io, "#define Kr21_LQR     (%.10ff)  // Ganancia de referencia de posición\n", 0.0)
-        @printf(io, "#define Kr22_LQR     (%.10ff)  // Ganancia de referencia de posición\n", 0.0)
+        # Ambas ruedas reciben la misma referencia de posición; sin referencia de yaw.
+        @printf(io, "#define Kr11_LQR     (%.10ff)  // Referencia de posición (rueda izq.)\n", Kr[1])
+        @printf(io, "#define Kr12_LQR     (%.10ff)  // Referencia de yaw (rueda izq.)\n",      0.0)
+        @printf(io, "#define Kr21_LQR     (%.10ff)  // Referencia de posición (rueda der.)\n", Kr[1])
+        @printf(io, "#define Kr22_LQR     (%.10ff)  // Referencia de yaw (rueda der.)\n",      0.0)
         
         @printf(io, "#endif /* __LQR_GAIN_H */\n")
     else
@@ -353,7 +354,7 @@ end
 # ------------------------------------------------------------------------------
 # 4. FUNCIÓN RECEPTORA DEL CONTROLADOR
 # ------------------------------------------------------------------------------
-function desplegar_controlador(K_matrix, Kr=0.0)
+function desplegar_controlador(K_matrix, Kr=zeros(2,2))
     write_controller(K_matrix, Kr)
     puerto = find_port()
     update_tasks_com_port(puerto)

@@ -2,7 +2,7 @@
 #include "lqr_gain.h"
 
 //���״̬���� Related status data
-float x_pose=10, x_speed, angle_x, gyro_x, angle_z=0, gyro_z, last_angle=0;
+float x_pose=0, x_speed, angle_x, gyro_x, angle_z=0, gyro_z, last_angle=0;
 float L_accel, R_accel, velocity_L, velocity_R;
 
 //LQR״̬����ϵ�� LQR state feedback coefficient
@@ -38,14 +38,14 @@ void EXTI15_10_IRQHandler(void)
 		Encoder_Right=-Read_Encoder(MOTOR_ID_MR);           					//��ȡ���ֱ�������ֵ��ǰ��Ϊ��������Ϊ�� Read the value of the right wheel encoder, forward is positive, backward is negative
 		Get_Velocity_Form_Encoder(Encoder_Left,Encoder_Right); //��ȡ�ٶ� Obtain speed
 				
-		x_speed=(Encoder_Left+Encoder_Right)/2*PI*Diameter_67/1000/1560*Control_Frequency; // ��1000��mmתm  Except for 1000 mm to m
+		x_speed=(Encoder_Left+Encoder_Right)/2.0f*PI*Diameter_67/1000/1560*Control_Frequency; // ��1000��mmתm  Except for 1000 mm to m
 		x_pose+=x_speed/Control_Frequency;
 		//��ȡ���(rad)�����ٶ�(rad/s)  Obtain inclination angle (rad) and angular velocity (rad/s)
 		angle_x=Angle_Balance/180*PI;
 		gyro_x=(angle_x-last_angle)*Control_Frequency;
 		last_angle=angle_x;
 		//��ȡת���ٶ�(rad/s)��ת���(rad)  Obtain steering speed (rad/s) and steering angle (rad)
-		gyro_z=(Encoder_Right-Encoder_Left)/Wheel_spacing/1000*PI*Diameter_67/1000/1560*Control_Frequency;
+		gyro_z=(Encoder_Right-Encoder_Left)/(Wheel_spacing/1000)*PI*Diameter_67/1000/1560*Control_Frequency;
 		angle_z+=gyro_z/Control_Frequency;
 				
 		if(g_newcarstate==enRUN)  
