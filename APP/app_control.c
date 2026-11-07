@@ -9,13 +9,13 @@ float L_accel, R_accel, velocity_L, velocity_R;
 float K11 = K11_LQR, K12 = K12_LQR, K13 = K13_LQR, K14 = K14_LQR, K15 = K15_LQR, K16 = K16_LQR;
 float K21 = K21_LQR, K22 = K22_LQR, K23 = K23_LQR, K24 = K24_LQR, K25 = K25_LQR, K26 = K26_LQR;
 float K_pos = Kr_pos;
-float ref_pos = 0;
+float ref_pos = 0.05;
 
 // Ganancias de yaw originales (rueda izq: K15,K16; der: K25,K26)
 float K15OLD = K15_LQR, K16OLD = K16_LQR, K25OLD = K25_LQR, K26OLD = K26_LQR;
 
 //Ŀ��״ֵ̬ Target state value
-float Target_x_speed=0, Target_angle_x=0.0349, Target_gyro_z=0;
+float Target_x_speed=0, Target_angle_x=0.0, Target_gyro_z=0;
 
 //�ٶȻ����PWMռ�ձȵı���ϵ�� Proportional coefficient for converting speed to PWM duty cycle
 float Ratio_accel=2400;	

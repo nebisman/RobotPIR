@@ -77,8 +77,9 @@ void TIM6_IRQHandler(void)
 		{
 			stop_time --;
 		}
-		if(!Stop_Flag)//开启平衡再跟随 Turn on balance and follow
-				App_Change_Car();//跟随		 Ultrasonic Follow
+		// Desactivado: modo ultrasonico (evitar/seguir) interfiere con las pruebas del LQR
+		//if(!Stop_Flag)//开启平衡再跟随 Turn on balance and follow
+				//App_Change_Car();//跟随		 Ultrasonic Follow
 		
 		Get_Distane();//获取超声波距离  Get distance
 		

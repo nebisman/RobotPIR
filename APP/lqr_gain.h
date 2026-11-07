@@ -7,16 +7,16 @@
 #define __LQR_GAIN_H
 
 // Ganancias LQR calculadas para los 4 estados del robot (sin yaw)
-#define K11_LQR    (0.1104336544f)  // Posición X
-#define K12_LQR    (0.1325203853f)  // Velocidad X
-#define K13_LQR    (-196.3507668266f)  // Ángulo Pitch
-#define K14_LQR    (-4.7916641133f)  // Vel. Angular Pitch
+#define K11_LQR    (7.0710678119f)  // Posición X
+#define K12_LQR    (8.2485884180f)  // Velocidad X
+#define K13_LQR    (-629.3835117493f)  // Ángulo Pitch
+#define K14_LQR    (-31.2946156839f)  // Vel. Angular Pitch
 #define K15_LQR    (0.0000000000f)  // Ángulo Yaw
 #define K16_LQR    (0.0000000000f)  // Vel. Angular Yaw
-#define K21_LQR    (0.1104336544f)  // Posición X
-#define K22_LQR    (0.1325203853f)  // Velocidad X
-#define K23_LQR    (-196.3507668266f)  // Ángulo Pitch
-#define K24_LQR    (-4.7916641133f)  // Vel. Angular Pitch
+#define K21_LQR    (7.0710678119f)  // Posición X
+#define K22_LQR    (8.2485884180f)  // Velocidad X
+#define K23_LQR    (-629.3835117493f)  // Ángulo Pitch
+#define K24_LQR    (-31.2946156839f)  // Vel. Angular Pitch
 #define K25_LQR    (0.0000000000f)  // Ángulo Yaw
 #define K26_LQR    (0.0000000000f)  // Vel. Angular Yaw
 #define Kr_pos     (-0.0000000000f)  // estado x 
