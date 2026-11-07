@@ -86,7 +86,7 @@ end
 # ------------------------------------------------------------------------------
 # 2. GENERACIÓN DE C HEADER (lqr_gain.h)
 # ------------------------------------------------------------------------------
-function write_controller(K, Kr; filepath=nothing)
+function write_controller(K, Kr=0.0; filepath=nothing)
     
 
     if isnothing(filepath)
@@ -118,7 +118,8 @@ function write_controller(K, Kr; filepath=nothing)
         @printf(io, "#define K23_LQR    (%.10ff)  // Ángulo Pitch\n",       K[2,3])
         @printf(io, "#define K24_LQR    (%.10ff)  // Vel. Angular Pitch\n", K[2,4])
         @printf(io, "#define K25_LQR    (%.10ff)  // Ángulo Yaw\n",         K[2,5])
-        @printf(io, "#define K26_LQR    (%.10ff)  // Vel. Angular Yaw\n\n", K[2,6])
+        @printf(io, "#define K26_LQR    (%.10ff)  // Vel. Angular Yaw\n",   K[2,6])
+        @printf(io, "#define Kr_pos     (%.10ff)  // Ganancia de referencia de posición\n\n", Kr[1])
         @printf(io, "#endif /* __LQR_GAIN_H */\n")
     elseif (m == 1) && (n == 4)
         # Solo dinámica de pitch: ambas ruedas usan la misma fila de K y
@@ -345,7 +346,7 @@ end
 # ------------------------------------------------------------------------------
 # 4. FUNCIÓN RECEPTORA DEL CONTROLADOR
 # ------------------------------------------------------------------------------
-function desplegar_controlador(K_matrix, Kr)
+function desplegar_controlador(K_matrix, Kr=0.0)
     write_controller(K_matrix, Kr)
     puerto = find_port()
     update_tasks_com_port(puerto)

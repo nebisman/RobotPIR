@@ -2,7 +2,7 @@
 #include "lqr_gain.h"
 
 //���״̬���� Related status data
-float x_pose=, x_speed, angle_x, gyro_x, angle_z=0, gyro_z, last_angle=0;
+float x_pose=0, x_speed, angle_x, gyro_x, angle_z=0, gyro_z, last_angle=0;
 float L_accel, R_accel, velocity_L, velocity_R;
 
 //LQR״̬����ϵ�� LQR state feedback coefficient
