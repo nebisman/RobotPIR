@@ -1,10 +1,10 @@
 #include "app_motor.h"
 
-float Velocity_Left,Velocity_Right;	//³µÂÖËÙ¶È(mm/s)  Wheel speed (mm/s)
+float Velocity_Left,Velocity_Right;	//ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½(mm/s)  Wheel speed (mm/s)
 
-#define MOTOR_IGNORE_PULSE (1300)//ËÀÇø  1450 25Khz   ´ËÖµÐèÒª¿´¾²Ö¹×´Ì¬Î¢µ÷   Dead zone   1450 25Khz   This value needs to be fine-tuned in static state
+#define MOTOR_IGNORE_PULSE (1400)//ï¿½ï¿½ï¿½ï¿½  1450 25Khz   ï¿½ï¿½Öµï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ö¹×´Ì¬Î¢ï¿½ï¿½   Dead zone   1450 25Khz   This value needs to be fine-tuned in static state
 
-//¹ýÂËËÀÇø Filter dead zone
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Filter dead zone
 int PWM_Ignore(int pulse)
 {
 	if (pulse > 0) return pulse + MOTOR_IGNORE_PULSE;
@@ -14,15 +14,15 @@ int PWM_Ignore(int pulse)
 
 /**************************************************************************
 Function: Assign to PWM register
-Input   : motor_left£ºLeft wheel PWM£»motor_right£ºRight wheel PWM
+Input   : motor_leftï¿½ï¿½Left wheel PWMï¿½ï¿½motor_rightï¿½ï¿½Right wheel PWM
 Output  : none
-º¯Êý¹¦ÄÜ£º¸³Öµ¸øPWM¼Ä´æÆ÷
-Èë¿Ú²ÎÊý£º×óÂÖPWM¡¢ÓÒÂÖPWM
-·µ»Ø  Öµ£ºÎÞ
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½Öµï¿½ï¿½PWMï¿½Ä´ï¿½ï¿½ï¿½
+ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PWMï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PWM
+ï¿½ï¿½ï¿½ï¿½  Öµï¿½ï¿½ï¿½ï¿½
 **************************************************************************/
 void Set_Pwm(int motor_left,int motor_right)
 {
-	if(motor_left == 0)//Í£³µ stop
+	if(motor_left == 0)//Í£ï¿½ï¿½ stop
 	{
 		L_PWMA = 0;
 		L_PWMB = 0;
@@ -33,8 +33,8 @@ void Set_Pwm(int motor_left,int motor_right)
 		R_PWMB = 0;
 	}
 	
-	//×óÂÖ  Left wheel
-  if(motor_left>0)	 //Ç°½ø   go ahead
+	//ï¿½ï¿½ï¿½ï¿½  Left wheel
+  if(motor_left>0)	 //Ç°ï¿½ï¿½   go ahead
 	{
 		L_PWMB = myabs(motor_left);
 		L_PWMA = 0;
@@ -45,13 +45,13 @@ void Set_Pwm(int motor_left,int motor_right)
 		L_PWMA = myabs(motor_left);
 	}
 	
-	//ÓÒÂÖ Right wheel
-	if(motor_right>0) //Ç°½ø
+	//ï¿½ï¿½ï¿½ï¿½ Right wheel
+	if(motor_right>0) //Ç°ï¿½ï¿½
 	{
 		R_PWMA = myabs(motor_right);
 		R_PWMB = 0;
 	}
-	else //ºóÍË Back
+	else //ï¿½ï¿½ï¿½ï¿½ Back
 	{
 		R_PWMA = 0;
 		R_PWMB = myabs(motor_right);	
@@ -62,11 +62,11 @@ void Set_Pwm(int motor_left,int motor_right)
 
 /**************************************************************************
 Function: PWM limiting range
-Input   : IN£ºInput  max£ºMaximum value  min£ºMinimum value
+Input   : INï¿½ï¿½Input  maxï¿½ï¿½Maximum value  minï¿½ï¿½Minimum value
 Output  : Output
-º¯Êý¹¦ÄÜ£ºÏÞÖÆPWM¸³Öµ 
-Èë¿Ú²ÎÊý£ºIN£ºÊäÈë²ÎÊý  max£ºÏÞ·ù×î´óÖµ  min£ºÏÞ·ù×îÐ¡Öµ
-·µ»Ø  Öµ£ºÏÞ·ùºóµÄÖµ
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½PWMï¿½ï¿½Öµ 
+ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½INï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  maxï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Öµ  minï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½Ð¡Öµ
+ï¿½ï¿½ï¿½ï¿½  Öµï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Öµ
 **************************************************************************/
 int PWM_Limit(int IN,int max,int min)
 {
@@ -81,17 +81,17 @@ int PWM_Limit(int IN,int max,int min)
 Function: Encoder reading is converted to speed (mm/s)
 Input   : none
 Output  : none
-º¯Êý¹¦ÄÜ£º±àÂëÆ÷¶ÁÊý×ª»»ÎªËÙ¶È£¨mm/s£©
-Èë¿Ú²ÎÊý£ºÎÞ
-·µ»Ø  Öµ£ºÎÞ
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½Îªï¿½Ù¶È£ï¿½mm/sï¿½ï¿½
+ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½  Öµï¿½ï¿½ï¿½ï¿½
 **************************************************************************/
 void Get_Velocity_Form_Encoder(int encoder_left,int encoder_right)
 { 	
-	float Rotation_Speed_L,Rotation_Speed_R;						//µç»ú×ªËÙ  ×ªËÙ=±àÂëÆ÷¶ÁÊý£¨5msÃ¿´Î£©*¶ÁÈ¡ÆµÂÊ/±¶ÆµÊý/¼õËÙ±È/±àÂëÆ÷¾«¶È //Motor speed=Encoder reading (5ms each time) * Reading frequency/harmonics/reduction ratio/Encoder accuracy
+	float Rotation_Speed_L,Rotation_Speed_R;						//ï¿½ï¿½ï¿½×ªï¿½ï¿½  ×ªï¿½ï¿½=ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½5msÃ¿ï¿½Î£ï¿½*ï¿½ï¿½È¡Æµï¿½ï¿½/ï¿½ï¿½Æµï¿½ï¿½/ï¿½ï¿½ï¿½Ù±ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ //Motor speed=Encoder reading (5ms each time) * Reading frequency/harmonics/reduction ratio/Encoder accuracy
 	Rotation_Speed_L = encoder_left*Control_Frequency/EncoderMultiples/Reduction_Ratio/Encoder_precision;
-	Velocity_Left = Rotation_Speed_L*PI*Diameter_67/10;		//Çó³ö±àÂëÆ÷ËÙ¶È=×ªËÙ*ÖÜ³¤ /10»»³Écm //Calculate the encoder speed=rotational speed * circumference/10 and convert it to cm
+	Velocity_Left = Rotation_Speed_L*PI*Diameter_67/10;		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½=×ªï¿½ï¿½*ï¿½Ü³ï¿½ /10ï¿½ï¿½ï¿½ï¿½cm //Calculate the encoder speed=rotational speed * circumference/10 and convert it to cm
 	Rotation_Speed_R = encoder_right*Control_Frequency/EncoderMultiples/Reduction_Ratio/Encoder_precision;
-	Velocity_Right = Rotation_Speed_R*PI*Diameter_67/10;		//Çó³ö±àÂëÆ÷ËÙ¶È=×ªËÙ*ÖÜ³¤ /10»»³Écm //Calculate the encoder speed=rotational speed * circumference/10 and convert it to cm
+	Velocity_Right = Rotation_Speed_R*PI*Diameter_67/10;		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½=×ªï¿½ï¿½*ï¿½Ü³ï¿½ /10ï¿½ï¿½ï¿½ï¿½cm //Calculate the encoder speed=rotational speed * circumference/10 and convert it to cm
 	
 }
 
@@ -100,17 +100,17 @@ void Get_Velocity_Form_Encoder(int encoder_left,int encoder_right)
 
 /**************************************************************************
 Function: If abnormal, turn off the motor
-Input   : angle£ºCar inclination£»voltage£ºVoltage
-Output  : 1£ºabnormal£»0£ºnormal
-º¯Êý¹¦ÄÜ£ºÒì³£¹Ø±Õµç»ú		
-Èë¿Ú²ÎÊý£ºangle£ºÐ¡³µÇã½Ç£»voltage£ºµçÑ¹
-·µ»Ø  Öµ£º1£ºÒì³£  0£ºÕý³£
+Input   : angleï¿½ï¿½Car inclinationï¿½ï¿½voltageï¿½ï¿½Voltage
+Output  : 1ï¿½ï¿½abnormalï¿½ï¿½0ï¿½ï¿½normal
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ì³£ï¿½Ø±Õµï¿½ï¿½		
+ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½angleï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Ç£ï¿½voltageï¿½ï¿½ï¿½ï¿½Ñ¹
+ï¿½ï¿½ï¿½ï¿½  Öµï¿½ï¿½1ï¿½ï¿½ï¿½ì³£  0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 **************************************************************************/	
 uint8_t Turn_Off(float angle, float voltage)
 {
 	u8 temp;
-	if(angle<-40||angle>40 || battery<9.6 || Stop_Flag==1)//µç³ØµçÑ¹µÍÓÚ10V¹Ø±Õµç»ú The battery voltage is lower than 10V and the motor is turned off || battery<9.6V
-	{	                                                 //Çã½Ç´óÓÚ40¶È¹Ø±Õµç»ú //Turn off the motor if the inclination angle is greater than 40 degrees
+	if(angle<-40||angle>40 || battery<9.6 || Stop_Flag==1)//ï¿½ï¿½Øµï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½10Vï¿½Ø±Õµï¿½ï¿½ The battery voltage is lower than 10V and the motor is turned off || battery<9.6V
+	{	                                                 //ï¿½ï¿½Ç´ï¿½ï¿½ï¿½40ï¿½È¹Ø±Õµï¿½ï¿½ //Turn off the motor if the inclination angle is greater than 40 degrees
 		temp=1;                                          
 		L_PWMA = 0;
 		L_PWMB = 0;

@@ -2,20 +2,28 @@
 #include "lqr_gain.h"
 
 //���״̬���� Related status data
-float x_pose=0, x_speed, angle_x, gyro_x, angle_z=0, gyro_z, last_angle=0;
+float x_pose=0.0, x_speed, angle_x, gyro_x, angle_z=0, gyro_z, last_angle=0;
 float L_accel, R_accel, velocity_L, velocity_R;
 
 //LQR״̬����ϵ�� LQR state feedback coefficient
 float K11 = K11_LQR, K12 = K12_LQR, K13 = K13_LQR, K14 = K14_LQR, K15 = K15_LQR, K16 = K16_LQR;
 float K21 = K21_LQR, K22 = K22_LQR, K23 = K23_LQR, K24 = K24_LQR, K25 = K25_LQR, K26 = K26_LQR;
-float Kr11  = Kr11_LQR, Kr12  = Kr12_LQR, Kr21  = Kr21_LQR, Kr22  = Kr22_LQR;
-float ref_pos = 0.1;
+float z = 0;
+float ki1 = Ki1_LQR; // Integral gain for position control
+float ki2 = Ki2_LQR; // Integral gain for yaw control
+
+
 
 // Ganancias de yaw originales (rueda izq: K15,K16; der: K25,K26)
 float K15OLD = K15_LQR, K16OLD = K16_LQR, K25OLD = K25_LQR, K26OLD = K26_LQR;
 
 //Ŀ��״ֵ̬ Target state value
-float Target_x_speed=0, Target_angle_x=0.0349, Target_gyro_z=0, Target_angle_z=0;
+float Target_x_speed=0.1, Target_angle_x=0.0349, Target_gyro_z=0, Target_angle_z=0.0;
+
+float command=1.0; // Command multiplier for position control
+
+
+
 //�ٶȻ����PWMռ�ձȵı���ϵ�� Proportional coefficient for converting speed to PWM duty cycle
 float Ratio_accel=2400;	
 
@@ -27,6 +35,8 @@ void EXTI15_10_IRQHandler(void)
 {
 	int Encoder_Left,Encoder_Right;             					//���ұ��������������  Pulse counting of left and right encoders
 	u8 motor_off;
+
+
 		
   // ����Ƿ����ж��¼�  Check if any interruption events have occurred
   if(MPU6050_INT==0)		
@@ -45,7 +55,7 @@ void EXTI15_10_IRQHandler(void)
 		gyro_x=(angle_x-last_angle)*Control_Frequency;
 		last_angle=angle_x;
 		//��ȡת���ٶ�(rad/s)��ת���(rad)  Obtain steering speed (rad/s) and steering angle (rad)
-		gyro_z=(Encoder_Right-Encoder_Left)/(Wheel_spacing/1000)*PI*Diameter_67/1000/1560*Control_Frequency;
+		gyro_z=(Encoder_Right-Encoder_Left)/Wheel_spacing/1000*PI*Diameter_67/1000/1560*Control_Frequency;
 		angle_z+=gyro_z/Control_Frequency;
 				
 		if(g_newcarstate==enRUN)  
@@ -111,8 +121,7 @@ void EXTI15_10_IRQHandler(void)
 			
 			Target_x_speed = 0;				//ƽ���ٶ�(m/s) Balance speed (m/s)
 			Target_gyro_z = 0;						//ƽ��ת���ٶ�(rad/s) Balanced steering speed (rad/s)
-			K15 = K15OLD; K25 = K25OLD;
-			K16 = K16OLD; K26 = K26OLD;
+
 		}
 		
 		// Mientras el control esta apagado (antes de KEY1, robot caido >40 grados
@@ -126,12 +135,12 @@ void EXTI15_10_IRQHandler(void)
 		}
 
 		//�����������(LQR������) Calculate input variables (LQR controller)
-		L_accel= Kr11*ref_pos + Kr12*Target_angle_z - (K11*x_pose+K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*angle_z+K16*(gyro_z-Target_gyro_z));
-		R_accel= Kr21*ref_pos + Kr22*Target_angle_z - (K21*x_pose+K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*angle_z+K26*(gyro_z-Target_gyro_z));
-		//�ٶȻ����PWMռ�ձ�  Convert speed to PWM duty cycle
+		L_accel=   - (ki1*z + K11*x_pose *command + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*angle_z+K16*(gyro_z-Target_gyro_z));
+		R_accel=   - (ki2*z + K21*x_pose *command + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*angle_z+K26*(gyro_z-Target_gyro_z));
+		//ٶȻPWMռձ  Convert speed to PWM duty cycle
 		velocity_L=(int)(Ratio_accel*(x_speed+L_accel/Control_Frequency));
 		velocity_R=(int)(Ratio_accel*(x_speed+R_accel/Control_Frequency));
-		
+		z += (Target_angle_z -angle_z)/Control_Frequency; // Integral of yaw error for position control
 		
 		//PWM�޷�  PWM limiting
 		Motor_Left=PWM_Limit(velocity_L,2600,-2600); //25khz->2592 

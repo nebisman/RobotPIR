@@ -48,6 +48,9 @@ A = [0.0  1.0   0.0   0.0;
      0.0  0.0   0.0   1.0;  
      0.0  0.0  A_43   0.0]
 
+
+
+
 # Matriz de entrada B (6x2)
 B = (inercia/r) .* [0.0;
                     B_21 + B_22;
@@ -55,7 +58,7 @@ B = (inercia/r) .* [0.0;
                     B_41 + B_42;                   
                     ]
 
-C = [0.0 1.0 0.0 0.0]
+C = [1.0 0.0 0.0 0.0]
 D = zeros(1, 1)
 
 sys = ss(A, B, C, D)
@@ -84,20 +87,20 @@ polos_lc = [lambda_1, lambda_2, lambda_3, lambda_4]
 
 # Penalización de desviación de estados Q (6x6)
 Q_lqr = diagm([
-    500.0,   # [1] Posición X (m)
-    500.0,  # [2] Velocidad lineal X (m/s)
-    200.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
-    5000.0,  # [4] Velocidad angular Pitch (rad/s)
+    1000.0,   # [1] Posición X (m)
+    0.0,  # [2] Velocidad lineal X (m/s)
+    0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
+    80.0,  # [4] Velocidad angular Pitch (rad/s)
 ])
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
-R_lqr = 10
+R_lqr = 100
 
 # Cálculo de la matriz K de ganancias LQR (Matriz de 2x6)
 
 K  = lqr(sys, Q_lqr, R_lqr)
-print(K)
-Kr = Matrix(-1 / (C * inv(A - B*K) * B))
+K = [-62.048 -73.3232  -361.4617 -35.9024]
+Kr = [0.0]
 
 
 println("Ganancias calculadas por asignación de polos:")

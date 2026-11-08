@@ -59,9 +59,8 @@ B = (inercia/r) .* [0.0   0.0;
                     0.0   0.0;
                     B_61  B_62]
 
-C = [1.0 0.0 0.0 0.0 0.0 0.0;
-     0.0 0.0 0.0 0.0 1.0 0.0]
-D = zeros(2, 2)
+C = [0.0 0.0 0.0 0.0 1.0 0.0]
+D = zeros(1, 2)
 
 sys = ss(A, B, C, D)
 
@@ -72,26 +71,25 @@ sys = ss(A, B, C, D)
 # Penalización de desviación de estados Q (6x6)
 Q_lqr = diagm([
     7700.0,   # [1] Posición X (m)
-    10.0,  # [2] Velocidad lineal X (m/s)
+    0.0,  # [2] Velocidad lineal X (m/s)
     0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
     1600.0,  # [4] Velocidad angular Pitch (rad/s)
-    4000.0,    # [5] Ángulo Yaw / Orientación (rad)
+    500.0,    # [5] Ángulo Yaw / Orientación (rad)
     0.0      # [6] Velocidad angular Yaw (rad/s)
 ])
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
 R_lqr = [
     1.0  0.0;
-    0.0  1.0
+    0.0  1.5
 ]
 
-    Q = [7700 0 0 0 0 0; 0 0 0 0 0 0; 0 0 0 0 0 0; 0 0 0 1600 0 0; 0 0 0 0 500 0; 0 0 0 0 0 0];
-    R = [1 0; 0 1];
+  
 
 # Cálculo de la matriz K de ganancias LQR (Matriz de 2x6)
 Klqr = lqr(sys, Q_lqr, R_lqr)
 
-Kr =  -(C * inv(A - B*Klqr) * B)
+
 
 
 
