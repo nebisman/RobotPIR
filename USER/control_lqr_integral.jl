@@ -59,7 +59,7 @@ B = (inercia/r) .* [0.0   0.0;
                     0.0   0.0;
                     B_61  B_62]
 
-C = [0.0 0.0 0.0 0.0 1.0 0.0]
+C = [1.0 0.0 0.0 0.0 0.0 0.0]
 D = zeros(1, 2)
 
 sys = ss(A, B, C, D)
@@ -70,23 +70,23 @@ sys = ss(A, B, C, D)
 
 # Penalización de desviación de estados Q (6x6)
 Q_lqr = diagm([
-    7700.0,   # [1] Posición X (m)
+    7000.0,   # [1] Posición X (m)
     0.0,  # [2] Velocidad lineal X (m/s)
     0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
     1600.0,  # [4] Velocidad angular Pitch (rad/s)
-    200.0,    # [5] Ángulo Yaw / Orientación (rad)
-    0.0,      # [6] Velocidad angular Yaw (rad/s)
-    2500.0
+    2000.0,    # [5] Ángulo Yaw / Orientación (rad)
+    10.0,      # [6] Velocidad angular Yaw (rad/s)
+    100.0,
 ])
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
 R_lqr = [
     .8  0.0;
-    0.0  .9
+    0.0  .81
 ]
 
-Ag = [A zeros(6, 1); -C 0.0]
-Bg = [B; zeros(1, 2)]
+Ag = [A  zeros(6, 1); -C 0]
+Bg = [B; 0 0]
 
 
 # Cálculo de la matriz K de ganancias LQR (Matriz de 2x6)
@@ -101,4 +101,4 @@ Klqr = lqr(Continuous, Ag, Bg, Q_lqr, R_lqr)
 # ==============================================================================
 include("lqr_pipeline.jl")
 
-desplegar_controlador(Klqr, Kr)
+set_ss_controller(Klqr)

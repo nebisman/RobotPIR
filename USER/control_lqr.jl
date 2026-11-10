@@ -68,20 +68,23 @@ sys = ss(A, B, C, D)
 # 3. SINTONIZACIÓN DEL CONTROLADOR LQR 
 # =====================================
 
-# Penalización de desviación de estados Q (6x6)
+# # Penalización de desviación de estados Q (6x6)
+
+
 Q_lqr = diagm([
-    7700.0,   # [1] Posición X (m)
-    0.0,  # [2] Velocidad lineal X (m/s)
-    0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
-    1600.0,  # [4] Velocidad angular Pitch (rad/s)
-    500.0,    # [5] Ángulo Yaw / Orientación (rad)
-    0.0      # [6] Velocidad angular Yaw (rad/s)
-])
+     2000.0,   # [1] Posición X (m)
+     0.0,  # [2] Velocidad lineal X (m/s)
+     0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
+     1000.0,  # [4] Velocidad angular Pitch (rad/s)
+     2000.0,    # [5] Ángulo Yaw / Orientación (rad)
+     0.0      # [6] Velocidad angular Yaw (rad/s)
+ ])
+
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
 R_lqr = [
     1.0  0.0;
-    0.0  1.5
+    0.0  1.0
 ]
 
   
@@ -98,4 +101,4 @@ Klqr = lqr(sys, Q_lqr, R_lqr)
 # ==============================================================================
 include("lqr_pipeline.jl")
 
-desplegar_controlador(Klqr, Kr)
+set_ss_controller(Klqr; ref_pos=1.0, ref_yaw=0.0)  # Despliegue del controlador LQR en hardware

@@ -86,7 +86,7 @@ end
 # ------------------------------------------------------------------------------
 # 2. GENERACIÓN DE C HEADER (lqr_gain.h)
 # ------------------------------------------------------------------------------
-function write_controller(K, Kr=zeros(2,2); filepath=nothing)
+function write_controller(K; ref_pos = 0.0, ref_yaw = 0.0,  type=:pos, filepath=nothing)
     
 
     if isnothing(filepath)
@@ -98,61 +98,97 @@ function write_controller(K, Kr=zeros(2,2); filepath=nothing)
     # se lanza el error sin tocar el lqr_gain.h existente.
     io = IOBuffer()
     m, n = size(K)
-    if (m == 2) && (n == 6)
-        @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")
-        @printf(io, "/* =================================================================== */\n")
-        @printf(io, "/* ARCHIVO GENERADO AUTOMÁTICAMENTE DESDE JULIA                        */\n")
-        @printf(io, "/* NO EDITAR MANUALMENTE - Ejecutar diseno_controlador.jl              */\n")
-        @printf(io, "/* =================================================================== */\n")
-        @printf(io, "#ifndef __LQR_GAIN_H\n")
-        @printf(io, "#define __LQR_GAIN_H\n\n")
-        @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")
-        @printf(io, "#define K11_LQR    %.10f  // Posición X\n",         K[1,1])
-        @printf(io, "#define K12_LQR    %.10f  // Velocidad X\n",        K[1,2])
-        @printf(io, "#define K13_LQR    %.10f  // Ángulo Pitch\n",       K[1,3])
-        @printf(io, "#define K14_LQR    %.10f  // Vel. Angular Pitch\n", K[1,4])
-        @printf(io, "#define K15_LQR    %.10f  // Ángulo Yaw\n",         K[1,5])
-        @printf(io, "#define K16_LQR    %.10f  // Vel. Angular Yaw\n",   K[1,6])
-        @printf(io, "#define K21_LQR    %.10f  // Posición X\n",         K[2,1])
-        @printf(io, "#define K22_LQR    %.10f  // Velocidad X\n",        K[2,2])
-        @printf(io, "#define K23_LQR    %.10f  // Ángulo Pitch\n",       K[2,3])
-        @printf(io, "#define K24_LQR    %.10f  // Vel. Angular Pitch\n", K[2,4])
-        @printf(io, "#define K25_LQR    %.10f  // Ángulo Yaw\n",         K[2,5])
-        @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,6])
-        @printf(io, "#define Ki1_LQR     %.10f  // Constante integral Yaw\n", 0.0)    
-        @printf(io, "#define Ki2_LQR     %.10f  // Constante integral Yaw\n", 0.0)   
-        @printf(io, "#endif /* __LQR_GAIN_H */\n")
-    elseif (m == 2) && (n == 7)
-        # Solo dinámica de pitch: ambas ruedas usan la misma fila de K y
-        # las ganancias de yaw quedan en cero (app_control.c usa las 12 macros).
-        @printf(io, "// Ganancias LQR calculadas para los 4 estados del robot\n")
-        @printf(io, "/* =================================================================== */\n")
-        @printf(io, "/* ARCHIVO GENERADO AUTOMÁTICAMENTE DESDE JULIA                        */\n")
-        @printf(io, "/* NO EDITAR MANUALMENTE - Ejecutar diseno_controlador.jl              */\n")
-        @printf(io, "/* =================================================================== */\n")
-        @printf(io, "#ifndef __LQR_GAIN_H\n")
-        @printf(io, "#define __LQR_GAIN_H\n\n")
-        @printf(io, "// Ganancias LQR calculadas para los 7 estados del robot\n")
-        @printf(io, "#define K11_LQR    %.10f  // Posición X\n",         K[1,1])
-        @printf(io, "#define K12_LQR    %.10f  // Velocidad X\n",        K[1,2])
-        @printf(io, "#define K13_LQR    %.10f  // Ángulo Pitch\n",       K[1,3])
-        @printf(io, "#define K14_LQR    %.10f  // Vel. Angular Pitch\n", K[1,4])
-        @printf(io, "#define K15_LQR    %.10f  // Ángulo Yaw\n",         K[1,5])
-        @printf(io, "#define K16_LQR    %.10f  // Vel. Angular Yaw\n",   K[1,6])
-        @printf(io, "#define K21_LQR    %.10f  // Posición X\n",         K[2,1])
-        @printf(io, "#define K22_LQR    %.10f  // Velocidad X\n",        K[2,2])
-        @printf(io, "#define K23_LQR    %.10f  // Ángulo Pitch\n",       K[2,3])
-        @printf(io, "#define K24_LQR    %.10f  // Vel. Angular Pitch\n", K[2,4])
-        @printf(io, "#define K25_LQR    %.10f  // Ángulo Yaw\n",         K[2,5])
-        @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,6])  
-        @printf(io, "#define Ki1_LQR     %.10f  // Constante integral Yaw\n",   K[1,7])    
-        @printf(io, "#define Ki2_LQR     %.10f  // Constante  integral Yaw\n",   K[2,7])    
+    if  type == :pos
+            @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")
+            @printf(io, "/* =================================================================== */\n")
+            @printf(io, "/* ARCHIVO GENERADO AUTOMÁTICAMENTE DESDE JULIA                        */\n")
+            @printf(io, "/* NO EDITAR MANUALMENTE - Ejecutar diseno_controlador.jl              */\n")
+            @printf(io, "/* =================================================================== */\n")
+            @printf(io, "#ifndef __LQR_GAIN_H\n")
+            @printf(io, "#define __LQR_GAIN_H\n\n")
+            @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")
+            @printf(io, "#define K11_LQR    %.10f  // Posición X\n",         K[1,1])
+            @printf(io, "#define K12_LQR    %.10f  // Velocidad X\n",        K[1,2])
+            @printf(io, "#define K13_LQR    %.10f  // Ángulo Pitch\n",       K[1,3])
+            @printf(io, "#define K14_LQR    %.10f  // Vel. Angular Pitch\n", K[1,4])
+            @printf(io, "#define K15_LQR    %.10f  // Ángulo Yaw\n",         K[1,5])
+            @printf(io, "#define K16_LQR    %.10f  // Vel. Angular Yaw\n",   K[1,6])
+            @printf(io, "#define K21_LQR    %.10f  // Posición X\n",         K[2,1])
+            @printf(io, "#define K22_LQR    %.10f  // Velocidad X\n",        K[2,2])
+            @printf(io, "#define K23_LQR    %.10f  // Ángulo Pitch\n",       K[2,3])
+            @printf(io, "#define K24_LQR    %.10f  // Vel. Angular Pitch\n", K[2,4])
+            @printf(io, "#define K25_LQR    %.10f  // Ángulo Yaw\n",         K[2,5])
+            @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,6])
 
+        if (m == 2) && (n == 6)
+            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral x\n", 0.0)    
+            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral Yaw\n", 0.0)   
+            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral x\n", 0.0)    
+            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral Yaw\n", 0.0)   
+            @printf(io, "#define REFPOS_LQR     %.10f  // referencia pos x \n", ref_pos)
+            @printf(io, "#define REFPSI_LQR     %.10f  // referencia angulo Yaw \n", ref_yaw * pi/180.0)
+            @printf(io, "#endif /* __LQR_GAIN_H */\n")
+        
+        elseif (m == 2) && (n == 7)
+            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral x\n", K[1,7])    
+            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral Yaw\n", 0.0)   
+            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral x\n", K[2,7])    
+            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral Yaw\n", 0.0)   
+            @printf(io, "#endif /* __LQR_GAIN_H */\n")
+        
+
+        else
+            error("Dimensiones de K no soportadas: $(m)×$(n). " *
+                  "Se espera 2×6 (posicion ), 2×7 (posicion + yaw + integral posicion) o 2×8 (posicion + yaw + integral posicion + integral yaw).")
+        end
+    
+    elseif type == :vel
+         # las ganancias de yaw quedan en cero (app_control.c usa las 12 macros).
+            @printf(io, "// Ganancias LQR calculadas para los 4 estados del robot\n")
+            @printf(io, "/* =================================================================== */\n")
+            @printf(io, "/* ARCHIVO GENERADO AUTOMÁTICAMENTE DESDE JULIA                        */\n")
+            @printf(io, "/* NO EDITAR MANUALMENTE - Ejecutar diseno_controlador.jl              */\n")
+            @printf(io, "/* =================================================================== */\n")
+            @printf(io, "#ifndef __LQR_GAIN_H\n")
+            @printf(io, "#define __LQR_GAIN_H\n\n")
+            @printf(io, "// Ganancias LQR calculadas para los 7 estados del robot\n")
+            @printf(io, "#define K11_LQR    %.10f  // Posición X\n",         0.0)
+            @printf(io, "#define K12_LQR    %.10f  // Velocidad X\n",        K[1,1])
+            @printf(io, "#define K13_LQR    %.10f  // Ángulo Pitch\n",       K[1,2])
+            @printf(io, "#define K14_LQR    %.10f  // Vel. Angular Pitch\n", K[1,3])
+            @printf(io, "#define K15_LQR    %.10f  // Ángulo Yaw\n",         K[1,4])
+            @printf(io, "#define K16_LQR    %.10f  // Vel. Angular Yaw\n",   K[1,5])
+            @printf(io, "#define K21_LQR    %.10f  // Posición X\n",         0.0)
+            @printf(io, "#define K22_LQR    %.10f  // Velocidad X\n",        K[2,1])
+            @printf(io, "#define K23_LQR    %.10f  // Ángulo Pitch\n",       K[2,2])
+            @printf(io, "#define K24_LQR    %.10f  // Vel. Angular Pitch\n", K[2,3])
+            @printf(io, "#define K25_LQR    %.10f  // Ángulo Yaw\n",         K[2,4])
+            @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,5])  
+        if (m == 2) && (n == 5)
+            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral x\n", 0.0)    
+            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral Yaw\n", 0.0)   
+            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral x\n", 0.0)    
+            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral Yaw\n", 0.0)  
+            @printf(io, "#endif /* __LQR_GAIN_H */\n") 
+        elseif (m == 2) && (n == 6)
+            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral x\n", K[1,6])    
+            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral Yaw\n", 0.0)   
+            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral x\n", K[2,6])    
+            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral Yaw\n", 0.0)  
+            @printf(io, "#endif /* __LQR_GAIN_H */\n") 
+        elseif (m == 2) && (n == 7)
+            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral x\n", K[1,6])    
+            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral Yaw\n", K[1,7])   
+            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral x\n", K[2,6])    
+            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral Yaw\n", K[2,7])
+            @printf(io, "#endif /* __LQR_GAIN_H */\n")
+        else        
+            error("Dimensiones de K no soportadas: $(m)×$(n). " *
+                  "Se espera 2×5 (velocidad + yaw), 2×6 (velocidad + yaw + integral velocidad) o 2×7 (velocidad + yaw + integral velocidad + integral yaw).")
+        end
+        
         # Ambas ruedas reciben la misma referencia de posición; sin referencia de yaw.       
-        @printf(io, "#endif /* __LQR_GAIN_H */\n")
-    else
-        error("Dimensiones de K no soportadas: $(m)×$(n). " *
-              "Se espera 2×6 (pitch + yaw) o 1×4 (solo pitch).")
+      
     end
 
     write(filepath, take!(io))
@@ -350,9 +386,38 @@ end
 # ------------------------------------------------------------------------------
 # 4. FUNCIÓN RECEPTORA DEL CONTROLADOR
 # ------------------------------------------------------------------------------
-function desplegar_controlador(K_matrix, Kr=zeros(2,2))
-    write_controller(K_matrix, Kr)
+function set_ss_controller(K_matrix; ref_pos = 0.0, ref_yaw = 0.0,  type=:pos)
+    write_controller(K_matrix; ref_pos, ref_yaw,  type=:pos)
     puerto = find_port()
     update_tasks_com_port(puerto)
     compile_and_flash(puerto)
+end
+
+
+function place2(A, B, polos )
+    # --- Asignación por Submodos Simétricos ---
+    A_long = A[1:4, 1:4]
+    B_long = B[1:4, 1:1] + B[1:4, 2:2] # Ambas ruedas avanzan juntas
+    polos_long = polos[1:4]
+
+    K_long = place(A_long, B_long, polos_long)
+
+    A_yaw = A[5:6, 5:6]
+    B_yaw = B[5:6, 1:1] - B[5:6, 2:2] # Giro diferencial
+    polos_yaw = polos[5:6]
+
+    K_yaw = place(A_yaw, B_yaw, polos_yaw)
+
+    # --- Reconstrucción de la Matriz K (2x6) ---
+    K_matrix = [
+        K_long K_yaw ;
+        K_long -K_yaw
+    ]
+
+    # Aseguramos que K1, K2, K3, K4 tengan el mismo signo negativo que requiere C
+    if K_matrix[1, 3] < 0 && K_matrix[1, 1] > 0
+        K_matrix[1, 1:2] .= -K_matrix[1, 1:2]
+        K_matrix[2, 1:2] .= -K_matrix[2, 1:2]
+    end
+    return K_matrix
 end
