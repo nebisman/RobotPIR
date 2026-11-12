@@ -231,7 +231,7 @@ function write_controller(K; ref_pos = 0.0, ref_vel=0.0, ref_yaw = 0.0, ref_wd=0
             @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,5])
             @printf(io, "#define Ki11_LQR     %.10f  // Constante integral v\n", K[1,6])    
             @printf(io, "#define Ki12_LQR     %.10f  // Constante integral w_delta\n", 0.0)   
-            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral v\n", K[1,6])    
+            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral v\n", K[2,6])    
             @printf(io, "#define Ki22_LQR     %.10f  // Constante integral w_delta\n", 0.0)   
             @printf(io, "#define REFPOS_LQR     %.10f  // referencia velocidad  \n", 0.0)
             @printf(io, "#define REFPSI_LQR     %.10f  // referencia wdelta \n", 0.0)

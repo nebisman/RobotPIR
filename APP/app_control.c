@@ -89,13 +89,13 @@ void EXTI15_10_IRQHandler(void)
 		} 
 		else if (command == 3){
 			L_accel=   - (ki11*z1  + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+ K15*angle_z + K16*(gyro_z-Target_gyro_z));
-			R_accel=   - (ki12*z1  + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+ K25*angle_z + K26*(gyro_z-Target_gyro_z));
+			R_accel=   - (ki21*z1  + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+ K25*angle_z + K26*(gyro_z-Target_gyro_z));
 		    z1 += (Target_x_speed - x_speed)/Control_Frequency; // Integral of yaw error for position control				
 		} 
 
 		else if (command == 4){
 			L_accel=   - (ki11*z1  + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*angle_z + K16*(gyro_z-Target_gyro_z));
-			R_accel=   - (ki12*z1  + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*angle_z + K26*(gyro_z-Target_gyro_z));
+			R_accel=   - (ki21*z1  + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*angle_z + K26*(gyro_z-Target_gyro_z));
 		    z1 += (Target_x_speed - x_speed)/Control_Frequency; // Integral of yaw error for position control				
 		} 
 

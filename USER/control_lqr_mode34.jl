@@ -72,8 +72,8 @@ Q_lqr = diagm([
     1000.0,  # [2] Velocidad lineal X (m/s)
     0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
     1600.0,  # [4] Velocidad angular Pitch (rad/s)
-    5000.0,    # [5] Ángulo Yaw / Orientación (rad)
-    2000.0,      # [6] Velocidad angular Yaw (rad/s)
+    500.0,    # [5] Ángulo Yaw / Orientación (rad)
+    200.0,      # [6] Velocidad angular Yaw (rad/s)
     500.0,  # integral posicion
 ])
 
