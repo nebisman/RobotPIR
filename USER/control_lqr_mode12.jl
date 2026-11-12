@@ -59,7 +59,8 @@ B = (inercia/r) .* [0.0   0.0;
                     0.0   0.0;
                     B_61  B_62]
 
-C = [1.0 0.0 0.0 0.0 0.0 0.0]
+#C = [1.0 0.0 0.0 0.0 0.0 0.0]
+C = [1.0 0.0 0.0 0.0 1.0 0.0] #mode 2 
 D = zeros(1, 2)
 
 sys = ss(A, B, C, D)
@@ -70,19 +71,19 @@ sys = ss(A, B, C, D)
 
 # Penalización de desviación de estados Q (6x6)
 Q_lqr = diagm([
-    7000.0,   # [1] Posición X (m)
-    0.0,  # [2] Velocidad lineal X (m/s)
+    100.0,   # [1] Posición X (m)
+    50.0,  # [2] Velocidad lineal X (m/s)
     0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
     1600.0,  # [4] Velocidad angular Pitch (rad/s)
-    2000.0,    # [5] Ángulo Yaw / Orientación (rad)
-    10.0,      # [6] Velocidad angular Yaw (rad/s)
-    100.0,
+    500.0,    # [5] Ángulo Yaw / Orientación (rad)
+    200.0,      # [6] Velocidad angular Yaw (rad/s)
+    500.0,  # integral posicion
 ])
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
 R_lqr = [
     .8  0.0;
-    0.0  .81
+    0.0  .80
 ]
 
 Ag = [A  zeros(6, 1); -C 0]
@@ -94,11 +95,9 @@ Klqr = lqr(Continuous, Ag, Bg, Q_lqr, R_lqr)
 
 
 
-
-
 # ==============================================================================
 # 🚀 4. DESPLIEGUE EN HARDWARE (Alt + Enter)
 # ==============================================================================
 include("lqr_pipeline.jl")
 
-set_ss_controller(Klqr)
+set_ss_controller(Klqr;ref_pos=0, ref_yaw=0.0,  type=1)

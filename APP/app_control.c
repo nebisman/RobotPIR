@@ -20,9 +20,9 @@ float ki22 =  Ki22_LQR; // Integral gain for yaw control
 float K15OLD = K15_LQR, K16OLD = K16_LQR, K25OLD = K25_LQR, K26OLD = K26_LQR;
 
 //Ŀ��״ֵ̬ Target state value
-float Target_x_speed=0.1, Target_angle_x=0.0349, Target_gyro_z=0, Target_angle_z=REFPSI_LQR;
+float Target_x_speed =  REFVEL_LQR, Target_angle_x=0.0349, Target_gyro_z=REFW_LQR, Target_angle_z=REFPSI_LQR; //0.0349
 float ref_pos = REFPOS_LQR;
-u8 command=0; // Command multiplier for position control
+u8 command=3; // Command multiplier for position control
 
 
 
@@ -59,72 +59,7 @@ void EXTI15_10_IRQHandler(void)
 		//��ȡת���ٶ�(rad/s)��ת���(rad)  Obtain steering speed (rad/s) and steering angle (rad)
 		gyro_z=(Encoder_Right-Encoder_Left)/Wheel_spacing/1000*PI*Diameter_67/1000/1560*Control_Frequency;
 		angle_z+=gyro_z/Control_Frequency;
-				
-		if(g_newcarstate==enRUN)  
-		{
-//			Target_x_speed = 0.6f;
-//			Target_x_speed = Target_x_speed/Flag_velocity;//ǰ���ٶ�(m/s)  Forward speed (m/s)
-			Target_x_speed = 0.5f;
-			x_pose = 0;
-		}			
-		else if(g_newcarstate==enBACK)
-		{
-			Target_x_speed = -0.6f;
-			Target_x_speed = Target_x_speed/Flag_velocity;//�����ٶ�(m/s)   Backward speed (m/s)
-			x_pose = 0;
-		}	
-		//����С����ת����ת  Control the left and right turns of the car
-		else if(g_newcarstate==enLEFT)
-		{
-			Target_gyro_z = -4;					//��תת���ٶ�(rad/s)  Left turn speed (rad/s)
-			Target_gyro_z = Target_gyro_z/Flag_velocity;
-			angle_z = 0;
-		}
-		else if(g_newcarstate==enRIGHT)
-		{
-			Target_gyro_z = 4;					//��תת���ٶ�(rad/s)  Right turn speed (rad/s)
-			Target_gyro_z = Target_gyro_z/Flag_velocity;
-			angle_z = 0;
-		}
-		else if(g_newcarstate == enTLEFT)//���� Left turn
-		{
-			Target_gyro_z = -4;					//��תת���ٶ�(rad/s)  Left turn speed (rad/s)
-			Target_gyro_z = Target_gyro_z/Flag_velocity;
-			angle_z = 0;
-			K15 =  22.3607f; K25 = -22.3607f;
-			K16 =  22.3607f; K26 = -22.3607f;
-		}
-		else if(g_newcarstate == enTRIGHT)//����  Right rotation
-		{
-			Target_gyro_z = 4;					//��תת���ٶ�(rad/s)  Right turn speed (rad/s)
-			Target_gyro_z = Target_gyro_z/Flag_velocity;
-			angle_z = 0;
-			K15 =  22.3607f; K25 = -22.3607f;
-			K16 =  22.3607f; K26 = -22.3607f;
-			
-		}
-		//���������ܣ����棩  Ultrasonic function (follow)
-	  else if(g_newcarstate==enFollow) //���� follow
-		{
-			Target_x_speed = 0.5;				//ǰ���ٶ�(m/s)  Forward speed (m/s)
-			x_pose = 0;
-			K15 = 0; K25 = 0;
-			K16 = 0; K26 = 0;
-		}
-		else if(g_newcarstate==enAvoid) //���  avoid
-		{
-			Target_x_speed = -0.3;				//�����ٶ�(m/s) Backward speed (m/s)
-			x_pose = 0;
-			K15 = 0; K25 = 0;
-			K16 = 0; K26 = 0;
-		}
-		else
-		{
-			
-			Target_x_speed = 0;				//ƽ���ٶ�(m/s) Balance speed (m/s)
-			Target_gyro_z = 0;						//ƽ��ת���ٶ�(rad/s) Balanced steering speed (rad/s)
-
-		}
+		
 		
 		// Mientras el control esta apagado (antes de KEY1, robot caido >40 grados
 		// o bateria baja) no se acumula posicion ni yaw: al activarse, el robot
@@ -147,8 +82,25 @@ void EXTI15_10_IRQHandler(void)
 			L_accel=   - (ki11*z1  + K11*x_pose + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*(angle_z - Target_angle_z) + K16*(gyro_z-Target_gyro_z));
 			R_accel=   - (ki21*z1  + K21*x_pose + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*(angle_z - Target_angle_z) + K26*(gyro_z-Target_gyro_z));
 		    z1 += (ref_pos-x_pose)/Control_Frequency; // Integral of yaw error for position control
-			// z2 += (Target_angle_z -angle_z)/Control_Frequency; // Integral of yaw error for position control
-		}
+		} else if (command == 2){
+			L_accel=   - (ki12*z2  + K11*x_pose + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*angle_z + K16*(gyro_z-Target_gyro_z));
+			R_accel=   - (ki22*z2  + K21*x_pose + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*angle_z + K26*(gyro_z-Target_gyro_z));
+		    z2 += (Target_angle_z - angle_z)/Control_Frequency; // Integral of yaw error for position control				
+		} 
+		else if (command == 3){
+			L_accel=   - (ki11*z1  + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+ K15*angle_z + K16*(gyro_z-Target_gyro_z));
+			R_accel=   - (ki12*z1  + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+ K25*angle_z + K26*(gyro_z-Target_gyro_z));
+		    z1 += (Target_x_speed - x_speed)/Control_Frequency; // Integral of yaw error for position control				
+		} 
+
+		else if (command == 4){
+			L_accel=   - (ki11*z1  + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*angle_z + K16*(gyro_z-Target_gyro_z));
+			R_accel=   - (ki12*z1  + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*angle_z + K26*(gyro_z-Target_gyro_z));
+		    z1 += (Target_x_speed - x_speed)/Control_Frequency; // Integral of yaw error for position control				
+		} 
+
+		
+
 				//ٶȻPWMռձ  Convert speed to PWM duty cycle
 		velocity_L=(int)(Ratio_accel*(x_speed+L_accel/Control_Frequency));
 		velocity_R=(int)(Ratio_accel*(x_speed+R_accel/Control_Frequency));

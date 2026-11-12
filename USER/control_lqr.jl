@@ -101,4 +101,4 @@ Klqr = lqr(sys, Q_lqr, R_lqr)
 # ==============================================================================
 include("lqr_pipeline.jl")
 
-set_ss_controller(Klqr; ref_pos=0.0, ref_yaw=0.0)  # Despliegue del controlador LQR en hardware
+set_ss_controller(Klqr; ref_pos=0.0, ref_yaw=0.0, type=0)  # Despliegue del controlador LQR en hardware
