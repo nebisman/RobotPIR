@@ -2,7 +2,7 @@
 
 float Velocity_Left,Velocity_Right;	//�����ٶ�(mm/s)  Wheel speed (mm/s)
 
-#define MOTOR_IGNORE_PULSE (1400)//����  1450 25Khz   ��ֵ��Ҫ����ֹ״̬΢��   Dead zone   1450 25Khz   This value needs to be fine-tuned in static state
+#define MOTOR_IGNORE_PULSE (1475)//����  1450 25Khz   ��ֵ��Ҫ����ֹ״̬΢��   Dead zone   1450 25Khz   This value needs to be fine-tuned in static state
 
 //�������� Filter dead zone
 int PWM_Ignore(int pulse)

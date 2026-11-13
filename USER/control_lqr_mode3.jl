@@ -44,56 +44,58 @@ B_61 =  1 / (r * (m*d + inercia*d/r^2 + 2*J_Y_delta/d))
 B_62 = -B_61
 
 # Matriz de estado A (6x6)
-Av = [ 0.0  A_23   0.0  0.0  0.0;
-       0.0   0.0   1.0  0.0  0.0;
-       0.0  A_43   0.0  0.0  0.0;
-       0.0   0.0   0.0  0.0  1.0;
-       0.0   0.0   0.0  0.0  0.0]
+Avw = [ 0.0  A_23   0.0    0.0;
+       0.0   0.0   1.0    0.0;
+       0.0  A_43   0.0    0.0;
+       0.0   0.0   0.0    0.0]
 
 # Matriz de entrada B (6x2)
-Bv = (inercia/r) .* [B_21  B_22;
+Bvw = (inercia/r) .* [B_21  B_22;
                     0.0   0.0;
-                    B_41  B_42;
-                    0.0   0.0;
+                    B_41  B_42;            
                     B_61  B_62]
 
+Cvw = [1.0 0.0 0.0 0.0; 
+       0.0 0.0 0.0 1.0]
+D = zeros(2, 2)
 
-Cv = [1.0 0.0 0.0 0.0 0.0] #mode 3 
-D = zeros(1, 2)
+sysvw = ss(Avw, Bvw, Cvw, D)
 
-sys = ss(A, B, C, D)
+
+
 
 # =====================================
 # 3. SINTONIZACIÓN DEL CONTROLADOR LQR 
 # =====================================
 
-# Penalización de desviación de estados Q (6x6)
-Q_lqr = diagm([
-    1000.0,  # [2] Velocidad lineal X (m/s)
-    0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
-    1600.0,  # [4] Velocidad angular Pitch (rad/s)
-    500.0,    # [5] Ángulo Yaw / Orientación (rad)
-    200.0,      # [6] Velocidad angular Yaw (rad/s)
-    500.0,  # integral posicion
-])
+# # Penalización de desviación de estados Q (6x6)
+
+
+Qvw = diagm([
+     1000.0,  # [2] Velocidad lineal X (m/s)
+     0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
+     1000.0,  # [4] Velocidad angular Pitch (rad/s)
+     5000.0,    # [5] velocidad w_delta
+     500,    # integral velocidad lineal
+     1000.0      # [6] integral velocidad w_delta
+ ])
+
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
-R_lqr = [
-    0.9  0.0;
-    0.0  1.3
+Rvw = [
+    1.0  0.0;
+    0.0  1.0
 ]
 
-Ag = [Av  zeros(5, 1); -Cv 0  ]
-Bg = [Bv; 0 0]
+Agvw = [Avw  zeros(4, 2); -Cvw zeros(2,2) ]
+Bgvw = [Bvw;  zeros(2,2)]
 
 
 # Cálculo de la matriz K de ganancias LQR (Matriz de 2x6)
-Klqr = lqr(Continuous, Ag, Bg, Q_lqr, R_lqr)
+Kvw = lqr(Continuous, Agvw, Bgvw, Qvw, Rvw)
+  
 
 
-# ==============================================================================
-# 🚀 4. DESPLIEGUE EN HARDWARE (Alt + Enter)
-# ==============================================================================
 include("lqr_pipeline.jl")
 
-set_ss_controller(Klqr;ref_pos=0, ref_vel=0.05,  type=3)
+set_ss_controller(Kvw; ref_wd =0.0,ref_vel=0.1, mode=3)

@@ -6,25 +6,27 @@ float x_pose=0.0, x_speed, angle_x, gyro_x, angle_z=0, gyro_z, last_angle=0;
 float L_accel, R_accel, velocity_L, velocity_R;
 
 
-//LQR״̬����ϵ�� LQR state feedback coefficient
+//LQR״̬����ϵ�� LQR state feedback coefficients for mode 0
 float K11 = K11_LQR, K12 = K12_LQR, K13 = K13_LQR, K14 = K14_LQR, K15 = K15_LQR, K16 = K16_LQR;
 float K21 = K21_LQR, K22 = K22_LQR, K23 = K23_LQR, K24 = K24_LQR, K25 = K25_LQR, K26 = K26_LQR;
-float z1 = 0, z2=0; // Integral of yaw error for position control
+
 float ki11  = Ki11_LQR; // Integral gain for position control
 float ki12 =  Ki12_LQR; // Integral gain for yaw control
 float ki21  = Ki21_LQR; // Integral gain for position control
 float ki22 =  Ki22_LQR; // Integral gain for yaw control
 
+float z1 = 0, z2=0; // Integral of yaw error for position control
 
 // Ganancias de yaw originales (rueda izq: K15,K16; der: K25,K26)
 float K15OLD = K15_LQR, K16OLD = K16_LQR, K25OLD = K25_LQR, K26OLD = K26_LQR;
 
 //Ŀ��״ֵ̬ Target state value
-float Target_x_speed =  REFVEL_LQR, Target_angle_x=0.0349, Target_gyro_z=REFW_LQR, Target_angle_z=REFPSI_LQR; //0.0349
+float Target_x_speed =  REFVEL_LQR, Target_angle_x=0.0349, Target_gyro_z= REFWD_LQR, Target_angle_z=REFYAW_LQR; //0.0349
 float ref_pos = REFPOS_LQR;
-u8 command=3; // Command multiplier for position control
+u8 mode = MODE_LQR; // Command multiplier for position control
 
-
+float time=0;
+float error_x = 0;
 
 //�ٶȻ����PWMռ�ձȵı���ϵ�� Proportional coefficient for converting speed to PWM duty cycle
 float Ratio_accel=2400;	
@@ -37,12 +39,14 @@ void EXTI15_10_IRQHandler(void)
 {
 	int Encoder_Left,Encoder_Right;             					//���ұ��������������  Pulse counting of left and right encoders
 	u8 motor_off;
-
+   
 
 		
   // ����Ƿ����ж��¼�  Check if any interruption events have occurred
   if(MPU6050_INT==0)		
 	{   
+	    time +=0.005; // aqui llevo el tiempo
+		
 		EXTI->PR=1<<12;                           					//����жϱ�־λ Clear interrupt flag bit
 		
 		Get_Angle(GET_Angle_Way);                     			//������̬��5msһ�Σ����ߵĲ���Ƶ�ʿ��Ը��ƿ������˲��ͻ����˲���Ч�� Updating the posture once every 5ms, a higher sampling frequency can improve the effectiveness of Kalman filtering and complementary filtering
@@ -57,8 +61,8 @@ void EXTI15_10_IRQHandler(void)
 		gyro_x=(angle_x-last_angle)*Control_Frequency;
 		last_angle=angle_x;
 		//��ȡת���ٶ�(rad/s)��ת���(rad)  Obtain steering speed (rad/s) and steering angle (rad)
-		gyro_z=(Encoder_Right-Encoder_Left)/Wheel_spacing/1000*PI*Diameter_67/1000/1560*Control_Frequency;
-		angle_z+=gyro_z/Control_Frequency;
+		gyro_z=(Encoder_Right - Encoder_Left )/Wheel_spacing/1000*PI*Diameter_67/1000/1560*Control_Frequency;
+		angle_z+= gyro_z/Control_Frequency;
 		
 		
 		// Mientras el control esta apagado (antes de KEY1, robot caido >40 grados
@@ -69,41 +73,28 @@ void EXTI15_10_IRQHandler(void)
 		{
 			x_pose = 0;
 			angle_z = 0;
+			z1=0;
+			z2=0;
 		}
 
 		//�����������(LQR������) Calculate input variables (LQR controller)
         
-        if (command == 0){
-			L_accel=   - (K11*(x_pose-ref_pos) + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x + K15*(angle_z) + K16*(gyro_z-Target_gyro_z));
-			R_accel=   - (K21*(x_pose-ref_pos) + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x + K25*(angle_z) + K26*(gyro_z-Target_gyro_z));
-		
-		// pendiente
-		} else if (command == 1){
-			L_accel=   - (ki11*z1  + K11*x_pose + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*(angle_z - Target_angle_z) + K16*(gyro_z-Target_gyro_z));
-			R_accel=   - (ki21*z1  + K21*x_pose + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*(angle_z - Target_angle_z) + K26*(gyro_z-Target_gyro_z));
-		    z1 += (ref_pos-x_pose)/Control_Frequency; // Integral of yaw error for position control
-		} else if (command == 2){
-			L_accel=   - (ki12*z2  + K11*x_pose + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*angle_z + K16*(gyro_z-Target_gyro_z));
-			R_accel=   - (ki22*z2  + K21*x_pose + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*angle_z + K26*(gyro_z-Target_gyro_z));
-		    z2 += (Target_angle_z - angle_z)/Control_Frequency; // Integral of yaw error for position control				
-		} 
-		else if (command == 3){
-			L_accel=   - (ki11*z1  + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+ K15*angle_z + K16*(gyro_z-Target_gyro_z));
-			R_accel=   - (ki21*z1  + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+ K25*angle_z + K26*(gyro_z-Target_gyro_z));
-		    z1 += (Target_x_speed - x_speed)/Control_Frequency; // Integral of yaw error for position control				
-		} 
+        if (mode == 0){
+			L_accel=   - (K11*(x_pose-ref_pos) + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x + K15*(angle_z - Target_angle_z) + K16*(gyro_z-Target_gyro_z));
+			R_accel=   - (K21*(x_pose-ref_pos) + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x + K25*(angle_z - Target_angle_z) + K26*(gyro_z-Target_gyro_z));
+		    velocity_L=(int)(Ratio_accel*(x_speed+L_accel/Control_Frequency));
+		    velocity_R=(int)(Ratio_accel*(x_speed+R_accel/Control_Frequency));
+		}
 
-		else if (command == 4){
-			L_accel=   - (ki11*z1  + K12*(x_speed-Target_x_speed)+K13*(angle_x-Target_angle_x)+K14*gyro_x+K15*angle_z + K16*(gyro_z-Target_gyro_z));
-			R_accel=   - (ki21*z1  + K22*(x_speed-Target_x_speed)+K23*(angle_x-Target_angle_x)+K24*gyro_x+K25*angle_z + K26*(gyro_z-Target_gyro_z));
-		    z1 += (Target_x_speed - x_speed)/Control_Frequency; // Integral of yaw error for position control				
+		else if (mode == 1){
+			L_accel=   - (ki11*z1  + K12*x_speed + K13*(angle_x-Target_angle_x)+K14*gyro_x+ K15*(angle_z - Target_angle_z) + K16*(gyro_z-Target_gyro_z));
+			R_accel=   - (ki21*z1  + K22*x_speed + K23*(angle_x-Target_angle_x)+K24*gyro_x + K25*(angle_z - Target_angle_z) + K26*(gyro_z-Target_gyro_z));	    
+			z1 += (Target_x_speed - x_speed)/Control_Frequency; // Integral  of speed			
 		} 
 
 		
 
-				//ٶȻPWMռձ  Convert speed to PWM duty cycle
-		velocity_L=(int)(Ratio_accel*(x_speed+L_accel/Control_Frequency));
-		velocity_R=(int)(Ratio_accel*(x_speed+R_accel/Control_Frequency));
+
 		
 		//PWM�޷�  PWM limiting
 		Motor_Left=PWM_Limit(velocity_L,2600,-2600); //25khz->2592 

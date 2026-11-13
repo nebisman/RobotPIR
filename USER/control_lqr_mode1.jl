@@ -43,55 +43,61 @@ B_42 = B_41
 B_61 =  1 / (r * (m*d + inercia*d/r^2 + 2*J_Y_delta/d))
 B_62 = -B_61
 
-# Matriz de estado A (6x6)
-A = [0.0  1.0   0.0   0.0  0.0  0.0;
-     0.0  0.0  A_23   0.0  0.0  0.0;
-     0.0  0.0   0.0   1.0  0.0  0.0;
-     0.0  0.0  A_43   0.0  0.0  0.0;
-     0.0  0.0   0.0   0.0  0.0  1.0;
-     0.0  0.0   0.0   0.0  0.0  0.0]
+# Matriz de estado Av (5x5)
+Av = [ 0.0  A_23   0.0  0.0  0.0;
+       0.0   0.0   1.0  0.0  0.0;
+       0.0  A_43   0.0  0.0  0.0;
+       0.0   0.0   0.0  0.0  1.0;
+       0.0   0.0   0.0  0.0  0.0]
 
-# Matriz de entrada B (6x2)
-B = (inercia/r) .* [0.0   0.0;
-                    B_21  B_22;
+# Matriz de entrada Bv (5x2)
+Bv = (inercia/r) .* [B_21  B_22;
                     0.0   0.0;
                     B_41  B_42;
                     0.0   0.0;
                     B_61  B_62]
 
-#C = [1.0 0.0 0.0 0.0 0.0 0.0]
-C = [1.0 0.0 0.0 0.0 1.0 0.0] #mode 2 
+
+Cv = [1.0 0.0 0.0 0.0 0.0] # mode 1 
 D = zeros(1, 2)
 
-sys = ss(A, B, C, D)
+sysv = ss(Av, Bv, Cv, D)
 
 # =====================================
 # 3. SINTONIZACIÓN DEL CONTROLADOR LQR 
 # =====================================
 
 # Penalización de desviación de estados Q (6x6)
-Q_lqr = diagm([
-    100.0,   # [1] Posición X (m)
-    50.0,  # [2] Velocidad lineal X (m/s)
+Qv = diagm([
+    5000.0,  # [2] Velocidad lineal X (m/s)
     0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
     1600.0,  # [4] Velocidad angular Pitch (rad/s)
     500.0,    # [5] Ángulo Yaw / Orientación (rad)
-    200.0,      # [6] Velocidad angular Yaw (rad/s)
+    100.0,      # [6] Velocidad angular Yaw (rad/s)
     500.0,  # integral posicion
 ])
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
-R_lqr = [
-    .8  0.0;
-    0.0  .80
+Rv = [
+    1  0.0;
+    0.0  1.0
 ]
 
-Ag = [A  zeros(6, 1); -C 0]
-Bg = [B; 0 0]
+Agv = [Av  zeros(5, 1); -Cv 0  ]
+Bgv = [Bv; 0 0]
 
 
 # Cálculo de la matriz K de ganancias LQR (Matriz de 2x6)
-Klqr = lqr(Continuous, Ag, Bg, Q_lqr, R_lqr)
+Kv = lqr(Continuous, Agv, Bgv, Qv, Rv)
+
+
+
+
+
+
+
+
+
 
 
 
@@ -100,4 +106,4 @@ Klqr = lqr(Continuous, Ag, Bg, Q_lqr, R_lqr)
 # ==============================================================================
 include("lqr_pipeline.jl")
 
-set_ss_controller(Klqr;ref_pos=0, ref_yaw=0.0,  type=1)
+set_ss_controller(Kv; ref_vel=0.1, mode=1)
