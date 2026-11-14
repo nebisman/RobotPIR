@@ -26,9 +26,9 @@ float K21_0 = K21_0_LQR, K22_0 = K22_0_LQR, K23_0 = K23_0_LQR, K24_0 = K24_0_LQR
 float K12_1 = K12_1_LQR, K13_1 = K13_1_LQR, K14_1 = K14_1_LQR, K15_1 = K15_1_LQR, K16_1 = K16_1_LQR, Ki1_1 = Ki1_1_LQR;
 float K22_1 = K22_1_LQR, K23_1 = K23_1_LQR, K24_1 = K24_1_LQR, K25_1 = K25_1_LQR, K26_1 = K26_1_LQR, Ki2_1 = Ki2_1_LQR;
 
-// Modo 2: u = -K (x - x_ref),  x = [x, v, pitch, pitch_rate, yaw_rate],  sin angulo de yaw   (lqr_gain_mode2.h)
-float K11_2 = K11_2_LQR, K12_2 = K12_2_LQR, K13_2 = K13_2_LQR, K14_2 = K14_2_LQR, K16_2 = K16_2_LQR;
-float K21_2 = K21_2_LQR, K22_2 = K22_2_LQR, K23_2 = K23_2_LQR, K24_2 = K24_2_LQR, K26_2 = K26_2_LQR;
+// Modo 2: u = -(K (x - x_ref) + Ki z2),  x = [x, v, pitch, pitch_rate, yaw_rate],  z2 = integral(ref_wd - yaw_rate)   (lqr_gain_mode2.h)
+float K11_2 = K11_2_LQR, K12_2 = K12_2_LQR, K13_2 = K13_2_LQR, K14_2 = K14_2_LQR, K16_2 = K16_2_LQR, Ki1_2 = Ki1_2_LQR;
+float K21_2 = K21_2_LQR, K22_2 = K22_2_LQR, K23_2 = K23_2_LQR, K24_2 = K24_2_LQR, K26_2 = K26_2_LQR, Ki2_2 = Ki2_2_LQR;
 
 // Referencias, compartidas por todos los modos (lqr_mode.h)
 float ref_pos = REFPOS_LQR;       // Posicion x (m)                  -> modos 0 y 2
@@ -36,6 +36,7 @@ float ref_vel = REFVEL_LQR;       // Velocidad lineal (m/s)          -> modo 1
 float ref_yaw = REFYAW_LQR;       // Angulo yaw (rad)                -> modos 0 y 1
 float ref_wd  = REFWD_LQR;        // Velocidad angular yaw (rad/s)   -> modo 2
 float z1 = 0;                     // Integral del error de velocidad (modo 1)
+float z2 = 0;                     // Integral del error de velocidad de yaw (modo 2)
 bool sel=true;
 // Modo activo. Arranca en el ultimo modo programado desde Julia (LQR_MODE).
 volatile u8 control_mode = LQR_MODE;
@@ -112,12 +113,13 @@ void EXTI15_10_IRQHandler(void)
 			x_pose = 0;
 			angle_z = 0;
 			z1=0;
+			z2=0;
 		}
 
 		//�����������(LQR������) Calculate input variables (LQR controller)
         
 		// Cambio de modo pedido con Set_Control_Mode(): se reinician la posicion,
-		// el yaw y la integral para que el nuevo modo arranque sin saltos (p. ej. al
+		// el yaw y las integrales para que el nuevo modo arranque sin saltos (p. ej. al
 		// pasar del modo 2 al 0 el robot no intenta deshacer las vueltas que dio).
 		if (mode_request != control_mode)
 		{
@@ -125,6 +127,7 @@ void EXTI15_10_IRQHandler(void)
 			ref_pos = x_pose;
 			ref_yaw = angle_z;
 			z1 = 0;
+			z2 = 0;
 		}
 
 		if (control_mode == 0)
@@ -145,10 +148,10 @@ void EXTI15_10_IRQHandler(void)
 		}
 		else
 		{
-
-			// Modo 2: velocidad angular de yaw (sin accion integral) manteniendo la posicion
-			L_accel = - (K11_2*(x_pose-ref_pos) + K12_2*x_speed + K13_2*(angle_x-Target_angle_x) + K14_2*gyro_x + K16_2*(gyro_z-ref_wd));
-			R_accel = - (K21_2*(x_pose-ref_pos) + K22_2*x_speed + K23_2*(angle_x-Target_angle_x) + K24_2*gyro_x + K26_2*(gyro_z-ref_wd));
+			// Modo 2: velocidad angular de yaw con accion integral, manteniendo la posicion
+			L_accel = - (K11_2*(x_pose-ref_pos) + K12_2*x_speed + K13_2*(angle_x-Target_angle_x) + K14_2*gyro_x + K16_2*(gyro_z-ref_wd) + Ki1_2*z2);
+			R_accel = - (K21_2*(x_pose-ref_pos) + K22_2*x_speed + K23_2*(angle_x-Target_angle_x) + K24_2*gyro_x + K26_2*(gyro_z-ref_wd) + Ki2_2*z2);
+			z2 += (ref_wd - gyro_z)/Control_Frequency;    // Integral del error de velocidad de yaw
 		}
 
 		// Cada rueda parte de su propia velocidad medida y no del promedio x_speed:

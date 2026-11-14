@@ -1,7 +1,7 @@
 # ==============================================================================
 # GUÍA DE LABORATORIO - CONTROL LQR / ROBOT DE EQUILIBRIO
 # Archivo: control_lqr_mode2.jl
-# Descripción: Modelo físico, matrices A y B, diseño LQR y llamado al pipeline (modo 2: velocidad angular de yaw)
+# Descripción: Modelo físico, matrices A y B, diseño LQR y llamado al pipeline (modo 2: velocidad angular de yaw con acción integral)
 # ==============================================================================
 
 using LinearAlgebra
@@ -43,9 +43,11 @@ B_42 = B_41
 B_61 =  1 / (r * (m*d + inercia*d/r^2 + 2*J_Y_delta/d))
 B_62 = -B_61
 
-# Modo 2: seguimiento de la velocidad angular de yaw, sin acción integral.
-# Estado x = [posición, vel_lineal, ángulo_pitch, vel_pitch, vel_yaw]
-# (no se realimenta el ángulo de yaw: el robot gira a la velocidad ref_wd)
+# Modo 2: seguimiento de la velocidad angular de yaw con acción integral.
+# Estado x = [posición, vel_lineal, ángulo_pitch, vel_pitch, vel_yaw] más el
+# estado integral z = ∫(ref_wd - vel_yaw) dt. La integral elimina el error de
+# seguimiento que dejan las perturbaciones constantes (por ejemplo, un motor más
+# débil que el otro). No se realimenta el ángulo de yaw.
 
 # Matriz de estado Aw (5x5)
 Aw = [0.0  1.0   0.0   0.0   0.0;
@@ -66,17 +68,27 @@ Dw = zeros(1, 2)
 
 sysw = ss(Aw, Bw, Cw, Dw)
 
+# Sistema aumentado con el integrador (6x6): dz/dt = ref_wd - Cw x
+Agw = [Aw   zeros(5, 1);
+       -Cw  0.0]
+Bgw = [Bw;
+       0.0  0.0]
+
 # =====================================
 # 3. SINTONIZACIÓN DEL CONTROLADOR LQR
 # =====================================
 
-# Penalización de desviación de estados Q (5x5)
+# Penalización de desviación de estados Q (6x6)
+# Ojo: el modelo continuo no ve que el firmware corrige la diferencia entre ruedas
+# cada 5 ms; con pesos muy grandes en la velocidad de yaw el giro puede oscilar en
+# el robot aunque el diseño continuo sea estable.
 Qw = diagm([
-     10000.0,   # [1] Posición X (m)
-     2000.0,  # [2] Velocidad lineal X (m/s)
-     00.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
-     200.0,  # [4] Velocidad angular Pitch (rad/s)
-     50000.0      # [6] Velocidad angular Yaw (rad/s)
+    5000.0,   # [1] Posición X (m)
+     2000.0,   # [2] Velocidad lineal X (m/s)
+        0.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
+      200.0,   # [4] Velocidad angular Pitch (rad/s)
+      5000.0,   # [6] Velocidad angular Yaw (rad/s)
+      2000.0,   # [7] Integral del error de velocidad angular de yaw
 ])
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
@@ -85,8 +97,8 @@ Rw = [
     0.0  1.0
 ]
 
-# Cálculo de la matriz K de ganancias LQR (Matriz de 2x5)
-Kw = lqr(Continuous, Aw, Bw, Qw, Rw)
+# Cálculo de la matriz K de ganancias LQR (Matriz de 2x6)
+Kw = lqr(Continuous, Agw, Bgw, Qw, Rw)
 
 
 # ==============================================================================
@@ -94,4 +106,4 @@ Kw = lqr(Continuous, Aw, Bw, Qw, Rw)
 # ==============================================================================
 include("lqr_pipeline.jl")
 
-set_ss_controller(Kw; mode=2, ref_pos=0.0, ref_wd=deg2rad(10))
+set_ss_controller(Kw; mode=2, ref_pos=0.0, ref_wd=deg2rad(4))

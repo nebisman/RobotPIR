@@ -96,8 +96,8 @@ end
 #            x = [v, θ, θ̇, ψ, ψ̇],  z = ∫(ref_vel - v) dt,  u = -K [x; z],  K de 2×6
 #            Usa las referencias ref_vel y ref_yaw
 #
-#   Modo 2 - Velocidad angular de yaw, sin acción integral (control_lqr_mode2.jl)
-#            x = [x, v, θ, θ̇, ψ̇],  u = -K (x - x_ref),  K de 2×5
+#   Modo 2 - Velocidad angular de yaw con acción integral (control_lqr_mode2.jl)
+#            x = [x, v, θ, θ̇, ψ̇],  z = ∫(ref_wd - ψ̇) dt,  u = -(K (x - x_ref) + Ki z),  K de 2×6
 #            Usa las referencias ref_pos y ref_wd
 #
 # Referencias: una sola de cada una, compartida por todos los modos, con el
@@ -107,7 +107,7 @@ end
 #
 # Cada vez que se programa un modo se escriben dos archivos en APP/:
 #   lqr_gain_mode<N>.h : ganancias del modo N, con sufijo _N
-#                        (K11_0_LQR, ..., K12_1_LQR, Ki1_1_LQR, ..., K16_2_LQR)
+#                        (K11_0_LQR, ..., K12_1_LQR, Ki1_1_LQR, ..., K16_2_LQR, Ki1_2_LQR)
 #   lqr_mode.h         : LQR_MODE (modo con el que arranca el robot) y las
 #                        referencias REFPOS_LQR, REFVEL_LQR, REFYAW_LQR, REFWD_LQR
 # Los headers de ganancias de los otros modos no se modifican. El firmware
@@ -117,11 +117,11 @@ end
 const MODOS_LQR = Dict(
     0 => "realimentación de estados",
     1 => "acción integral de velocidad lineal",
-    2 => "velocidad angular de yaw",
+    2 => "velocidad angular de yaw con acción integral",
 )
 
 # Tamaño de K que espera cada modo (columnas en el orden de su vector de estado)
-const DIM_K = Dict(0 => (2, 6), 1 => (2, 6), 2 => (2, 5))
+const DIM_K = Dict(0 => (2, 6), 1 => (2, 6), 2 => (2, 6))
 
 # Encabezado común de los archivos .h (solo ASCII: Keil muestra los .c/.h como GBK).
 function _cabecera_c!(io, guard, lineas)
@@ -192,11 +192,12 @@ end
 function _header_modo2(K)
     io = IOBuffer()
     _cabecera_c!(io, "__LQR_GAIN_MODE2_H", [
-        "lqr_gain_mode2.h - MODO 2: velocidad angular de yaw (sin integral)",
+        "lqr_gain_mode2.h - MODO 2: velocidad de yaw con accion integral",
         "ARCHIVO GENERADO AUTOMATICAMENTE DESDE JULIA (set_ss_controller)",
         "NO EDITAR MANUALMENTE - ejecutar control_lqr_mode2.jl",
         "",
-        "u = -K (x - x_ref),  x = [x, v, pitch, pitch_rate, yaw_rate]",
+        "u = -(K (x - x_ref) + Ki z),  x = [x, v, pitch, pitch_rate, yaw_rate]",
+        "z = integral(ref_wd - yaw_rate)",
         "Los indices Kij siguen el estado completo del modo 0 (j=6: yaw_rate);",
         "no hay K15/K25 porque el modo 2 no realimenta el angulo de yaw.",
         "Sufijo _2: ganancias del modo 2 (conviven con las de los otros modos)",
@@ -210,6 +211,7 @@ function _header_modo2(K)
         for (c, j) in enumerate(indices)
             _define(io, "K$(i)$(j)_2_LQR", K[i, c], estados[c])
         end
+        _define(io, "Ki$(i)_2_LQR", K[i, 6], "Integral del error de vel. yaw")
         println(io)
     end
     println(io, "#endif /* __LQR_GAIN_MODE2_H */")
@@ -225,7 +227,7 @@ function _header_modo_activo(mode, ref_pos, ref_vel, ref_yaw, ref_wd)
         "en ejecucion se cambia con Set_Control_Mode() (app_control.c).",
         "Las referencias son las mismas para todos los modos.",
     ])
-    @printf(io, "#define LQR_MODE %d  // 0: realimentacion de estados, 1: integral de velocidad, 2: velocidad de yaw\n\n", mode)
+    @printf(io, "#define LQR_MODE %d  // 0: estados, 1: integral de velocidad, 2: vel. de yaw con integral\n\n", mode)
     println(io, "// Referencias (variables ref_pos, ref_vel, ref_yaw, ref_wd de app_control.c)")
     _define(io, "REFPOS_LQR", ref_pos, "ref_pos: posicion x (m), modos 0 y 2")
     _define(io, "REFVEL_LQR", ref_vel, "ref_vel: velocidad lineal (m/s), modo 1")
