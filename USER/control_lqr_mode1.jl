@@ -1,7 +1,7 @@
 # ==============================================================================
 # GUÍA DE LABORATORIO - CONTROL LQR / ROBOT DE EQUILIBRIO
-# Archivo: diseno_controlador.jl
-# Descripción: Modelo físico, matrices A y B, diseño LQR y llamado al pipeline
+# Archivo: control_lqr_mode1.jl
+# Descripción: Modelo físico, matrices A y B, diseño LQR y llamado al pipeline (modo 1: acción integral de velocidad)
 # ==============================================================================
 
 using LinearAlgebra
@@ -74,7 +74,7 @@ Qv = diagm([
     1600.0,  # [4] Velocidad angular Pitch (rad/s)
     500.0,    # [5] Ángulo Yaw / Orientación (rad)
     100.0,      # [6] Velocidad angular Yaw (rad/s)
-    500.0,  # integral posicion
+    500.0,  # [7] Integral del error de velocidad
 ])
 
 # Penalización del esfuerzo de control R (2x2) [Motor Izquierdo, Motor Derecho]
@@ -91,19 +91,9 @@ Bgv = [Bv; 0 0]
 Kv = lqr(Continuous, Agv, Bgv, Qv, Rv)
 
 
-
-
-
-
-
-
-
-
-
-
 # ==============================================================================
 # 🚀 4. DESPLIEGUE EN HARDWARE (Alt + Enter)
 # ==============================================================================
 include("lqr_pipeline.jl")
 
-set_ss_controller(Kv; ref_vel=0.1, mode=1)
+set_ss_controller(Kv; mode=1, ref_vel=0.1, ref_yaw=0.0)

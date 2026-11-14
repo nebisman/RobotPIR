@@ -1,6 +1,6 @@
 # ==============================================================================
 # GUÍA DE LABORATORIO - CONTROL LQR / ROBOT DE EQUILIBRIO
-# Archivo: diseno_controlador.jl
+# Archivo: control_lqr_simulation.jl
 # Descripción: Modelo físico, matrices A y B, diseño LQR y llamado al pipeline
 # ==============================================================================
 

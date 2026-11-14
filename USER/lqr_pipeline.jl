@@ -84,173 +84,192 @@ function update_tasks_com_port(port::String)
 end
 
 # ------------------------------------------------------------------------------
-# 2. GENERACIÓN DE C HEADER (lqr_gain.h)
+# 2. GENERACIÓN DE C HEADERS (lqr_gain_mode0/1/2.h y lqr_mode.h)
 # ------------------------------------------------------------------------------
-function write_controller(K; ref_pos = 0.0, ref_vel=0.0, ref_yaw = 0.0, ref_wd=0.0,   mode = 0, filepath=nothing)
-    
+# Modos de control del firmware (APP/app_control.c):
+#
+#   Modo 0 - Realimentación de estados (control_lqr_mode0.jl, asignacion_polos.jl)
+#            x = [x, v, θ, θ̇, ψ, ψ̇],  u = -K (x - x_ref),  K de 2×6
+#            Usa las referencias ref_pos y ref_yaw
+#
+#   Modo 1 - Acción integral sobre la velocidad lineal (control_lqr_mode1.jl)
+#            x = [v, θ, θ̇, ψ, ψ̇],  z = ∫(ref_vel - v) dt,  u = -K [x; z],  K de 2×6
+#            Usa las referencias ref_vel y ref_yaw
+#
+#   Modo 2 - Velocidad angular de yaw, sin acción integral (control_lqr_mode2.jl)
+#            x = [x, v, θ, θ̇, ψ̇],  u = -K (x - x_ref),  K de 2×5
+#            Usa las referencias ref_pos y ref_wd
+#
+# Referencias: una sola de cada una, compartida por todos los modos, con el
+# mismo nombre y las mismas unidades que en app_control.c:
+#   ref_pos (m), ref_vel (m/s), ref_yaw (rad), ref_wd (rad/s)
+#   (un ángulo en grados se pasa como deg2rad(...))
+#
+# Cada vez que se programa un modo se escriben dos archivos en APP/:
+#   lqr_gain_mode<N>.h : ganancias del modo N, con sufijo _N
+#                        (K11_0_LQR, ..., K12_1_LQR, Ki1_1_LQR, ..., K16_2_LQR)
+#   lqr_mode.h         : LQR_MODE (modo con el que arranca el robot) y las
+#                        referencias REFPOS_LQR, REFVEL_LQR, REFYAW_LQR, REFWD_LQR
+# Los headers de ganancias de los otros modos no se modifican. El firmware
+# compila siempre las ganancias de todos los modos, así que puede cambiar de
+# modo en ejecución con Set_Control_Mode(0, 1 o 2).
 
-    if isnothing(filepath)
-        app_dir = joinpath(@__DIR__, "..", "APP")
-        filepath = isdir(app_dir) ? joinpath(app_dir, "lqr_gain.h") : joinpath(@__DIR__, "lqr_gain.h")
+const MODOS_LQR = Dict(
+    0 => "realimentación de estados",
+    1 => "acción integral de velocidad lineal",
+    2 => "velocidad angular de yaw",
+)
+
+# Tamaño de K que espera cada modo (columnas en el orden de su vector de estado)
+const DIM_K = Dict(0 => (2, 6), 1 => (2, 6), 2 => (2, 5))
+
+# Encabezado común de los archivos .h (solo ASCII: Keil muestra los .c/.h como GBK).
+function _cabecera_c!(io, guard, lineas)
+    println(io, "/* ======================================================================= */")
+    for l in lineas
+        println(io, "/* ", rpad(l, 71), " */")
     end
+    println(io, "/* ======================================================================= */")
+    println(io, "#ifndef $guard")
+    println(io, "#define $guard\n")
+end
 
-    # Se escribe primero en memoria: si las dimensiones de K no son válidas,
-    # se lanza el error sin tocar el lqr_gain.h existente.
+_define(io, nombre, valor, comentario) =
+    @printf(io, "#define %-13s %16.10f  // %s\n", nombre, valor, comentario)
+
+function _header_modo0(K)
     io = IOBuffer()
-    m, n = size(K)
-
-
-
-    if  mode == 0 # control solo de estabilización
-        if (m != 2)  | (n != 6)
-            error(" la matriz debe ser 2X6")
+    _cabecera_c!(io, "__LQR_GAIN_MODE0_H", [
+        "lqr_gain_mode0.h - MODO 0: realimentacion de estados",
+        "ARCHIVO GENERADO AUTOMATICAMENTE DESDE JULIA (set_ss_controller)",
+        "NO EDITAR MANUALMENTE - ejecutar control_lqr_mode0.jl",
+        "",
+        "u = -K (x - x_ref),  x = [x, v, pitch, pitch_rate, yaw, yaw_rate]",
+        "Sufijo _0: ganancias del modo 0 (conviven con las _1 del modo 1)",
+        "Las referencias estan en lqr_mode.h",
+    ])
+    estados = ("Posicion x", "Velocidad lineal v", "Angulo pitch",
+               "Vel. angular pitch", "Angulo yaw", "Vel. angular yaw")
+    for (i, rueda) in enumerate(("izquierda", "derecha"))
+        println(io, "// Rueda $rueda (fila $i de K)")
+        for j in 1:6
+            _define(io, "K$(i)$(j)_0_LQR", K[i, j], estados[j])
         end
-            @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")
-            @printf(io, "/* =================================================================== */\n")
-            @printf(io, "/* ARCHIVO GENERADO AUTOMÁTICAMENTE DESDE JULIA                        */\n")
-            @printf(io, "/* NO EDITAR MANUALMENTE - Ejecutar diseno_controlador.jl              */\n")
-            @printf(io, "/* =================================================================== */\n")
-            @printf(io, "#ifndef __LQR_GAIN_H\n")
-            @printf(io, "#define __LQR_GAIN_H\n\n")
-            @printf(io, "#define MODE_LQR %d  // modo de control\n\n", mode)
-            @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")
-            @printf(io, "#define K11_LQR    %.10f  // Posición X\n",         K[1,1])
-            @printf(io, "#define K12_LQR    %.10f  // Velocidad lineal V\n",        K[1,2])
-            @printf(io, "#define K13_LQR    %.10f  // Ángulo Pitch\n",       K[1,3])
-            @printf(io, "#define K14_LQR    %.10f  // Vel. Angular Pitch\n", K[1,4])
-            @printf(io, "#define K15_LQR    %.10f  // Ángulo Yaw\n",         K[1,5])
-            @printf(io, "#define K16_LQR    %.10f  // Vel. Angular Yaw\n",   K[1,6])
-            @printf(io, "#define K21_LQR    %.10f  // Posición X\n",         K[2,1])
-            @printf(io, "#define K22_LQR    %.10f  // Velocidad X\n",        K[2,2])
-            @printf(io, "#define K23_LQR    %.10f  // Ángulo Pitch\n",       K[2,3])
-            @printf(io, "#define K24_LQR    %.10f  // Vel. Angular Pitch\n", K[2,4])
-            @printf(io, "#define K25_LQR    %.10f  // Ángulo Yaw\n",         K[2,5])
-            @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,6])
-            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral de pos x\n", 0.0)    
-            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral de Yaw\n", 0.0)   
-            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral de pos x\n", 0.0)    
-            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral de Yaw\n", 0.0)   
-            @printf(io, "#define REFPOS_LQR   %.10f  // referencia pos x \n", ref_pos)
-            @printf(io, "#define REFYAW_LQR   %.10f  // referencia angulo Yaw \n", ref_yaw * pi/180.0)
-            @printf(io, "#define REFVEL_LQR   %.10f  // referencia velocidad lineal \n", 0.0)
-            @printf(io, "#define REFWD_LQR     %.10f  // referencia velocidad angular Yaw \n", 0.0)
-            @printf(io, "#endif /* __LQR_GAIN_H */\n")
-
-   
-        elseif mode == 1 # control con acción integral para la velocidad lineal
-             if (m != 2)  | (n != 6)
-               error(" la matriz debe ser 2 X 6")
-             end
-
-            @printf(io, "// Ganancias LQR calculadas para los 7 estados del robot\n")
-            @printf(io, "/* =================================================================== */\n")
-            @printf(io, "/* ARCHIVO GENERADO AUTOMÁTICAMENTE DESDE JULIA                        */\n")
-            @printf(io, "/* NO EDITAR MANUALMENTE - Ejecutar diseno_controlador.jl              */\n")
-            @printf(io, "/* =================================================================== */\n")
-            @printf(io, "#ifndef __LQR_GAIN_H\n")
-            @printf(io, "#define __LQR_GAIN_H\n\n")
-            @printf(io, "#define MODE_LQR %d  // modo de control\n\n", mode)
-            @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")
-            @printf(io, "#define K11_LQR    %.10f  // Posición X\n",        0.0)
-            @printf(io, "#define K12_LQR    %.10f  // Velocidad lineal V\n", K[1,1])
-            @printf(io, "#define K13_LQR    %.10f  // Ángulo Pitch\n",       K[1,2])
-            @printf(io, "#define K14_LQR    %.10f  // Vel. Angular Pitch\n", K[1,3])
-            @printf(io, "#define K15_LQR    %.10f  // Ángulo Yaw\n",         K[1,4])
-            @printf(io, "#define K16_LQR    %.10f  // Vel. Angular Yaw\n",   K[1,5])
-            @printf(io, "#define K21_LQR    %.10f  // Posición X\n",          0.0 )
-            @printf(io, "#define K22_LQR    %.10f  // Velocidad X\n",        K[2,1])
-            @printf(io, "#define K23_LQR    %.10f  // Ángulo Pitch\n",       K[2,2])
-            @printf(io, "#define K24_LQR    %.10f  // Vel. Angular Pitch\n", K[2,3])
-            @printf(io, "#define K25_LQR    %.10f  // Ángulo Yaw\n",         K[2,4])
-            @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,5])
-            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral velocidad\n", K[1,6])    
-            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral w_delta\n", 0.0)   
-            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral velocidad \n", K[2,6])    
-            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral w_delta\n", 0.0)   
-            @printf(io, "#define REFPOS_LQR     %.10f // referencia posicion x  \n", 0.0)
-            @printf(io, "#define REFYAW_LQR     %.10f  // referencia angulo de yaw  \n",ref_yaw*pi/180)
-            @printf(io, "#define REFVEL_LQR   %.10f  // referencia velocidad lineal x \n", ref_vel)
-            @printf(io, "#define REFWD_LQR     %.10f  // referencia velocidad w_delta \n", 0.0)
-            @printf(io, "#endif /* __LQR_GAIN_H */\n")
-      
-        elseif mode == 2 # control con acción integral de de velocidad de yaw
-             if (m != 2)  | (n != 6)
-               error(" la matriz debe ser 2 X 6")
-             end
-            @printf(io, "// Ganancias LQR calculadas para los 7 estados del robot\n")
-            @printf(io, "/* =================================================================== */\n")
-            @printf(io, "/* ARCHIVO GENERADO AUTOMÁTICAMENTE DESDE JULIA                        */\n")
-            @printf(io, "/* NO EDITAR MANUALMENTE - Ejecutar diseno_controlador.jl              */\n")
-            @printf(io, "/* =================================================================== */\n")
-            @printf(io, "#ifndef __LQR_GAIN_H\n")
-            @printf(io, "#define __LQR_GAIN_H\n\n")
-            @printf(io, "#define MODE_LQR %d  // modo de control\n\n", mode)
-            @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")
-            @printf(io, "#define K11_LQR    %.10f  // Posición X\n",   K[1,1])
-            @printf(io, "#define K12_LQR    %.10f  // Velocidad lineal V\n",  K[1,2])
-            @printf(io, "#define K13_LQR    %.10f  // Ángulo Pitch\n", K[1,3])
-            @printf(io, "#define K14_LQR    %.10f  // Vel. Angular Pitch\n", K[1,4])
-            @printf(io, "#define K15_LQR    %.10f  // Ángulo Yaw\n",     0.0)
-            @printf(io, "#define K16_LQR    %.10f  // Vel. Angular Yaw\n",   K[1,5])
-            @printf(io, "#define K21_LQR    %.10f  // Posición X\n",         K[2,1])
-            @printf(io, "#define K22_LQR    %.10f  // Velocidad X\n",        K[2,2])
-            @printf(io, "#define K23_LQR    %.10f  // Ángulo Pitch\n",       K[2,3])
-            @printf(io, "#define K24_LQR    %.10f  // Vel. Angular Pitch\n", K[2,4])
-            @printf(io, "#define K25_LQR    %.10f  // Ángulo Yaw\n",         0.0)
-            @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,5])
-            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral de velocidad \n", 0.0)    
-            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral  w_delta\n", K[1,6])   
-            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral de velocidad\n", 0.0)    
-            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral w_delta\n", K[2,6])   
-            @printf(io, "#define REFPOS_LQR     %.10f  // referencia posicion x  \n", 0.0)
-            @printf(io, "#define REFYAW_LQR     %.10f  // referencia angulo yaw\n", 0.0)
-            @printf(io, "#define REFVEL_LQR   %.10f  // referencia velocidad lineal v\n", ref_vel)
-            @printf(io, "#define REFWD_LQR     %.10f  // referencia w_delta \n", ref_wd*pi/180)
-            @printf(io, "#endif /* __LQR_GAIN_H */\n")
-
-            elseif mode == 3 # control con acción integral de velocidad lineal y  velocidad de yaw
-            if (m != 2)  | (n != 6)
-               error(" la matriz debe ser 2 X 6")
-            end
-            @printf(io, "// Ganancias LQR calculadas para los 7 estados del robot\n")
-            @printf(io, "/* =================================================================== */\n")
-            @printf(io, "/* ARCHIVO GENERADO AUTOMÁTICAMENTE DESDE JULIA                        */\n")
-            @printf(io, "/* NO EDITAR MANUALMENTE - Ejecutar diseno_controlador.jl              */\n")
-            @printf(io, "/* =================================================================== */\n")
-            @printf(io, "#ifndef __LQR_GAIN_H\n")
-            @printf(io, "#define __LQR_GAIN_H\n\n")
-            @printf(io, "#define MODE_LQR %d  // modo de control\n\n", mode)
-            @printf(io, "// Ganancias LQR calculadas para los 6 estados del robot\n")           
-            @printf(io, "#define K11_LQR    %.10f  // Posición X\n",   0.0)
-            @printf(io, "#define K12_LQR    %.10f  // Velocidad X\n",  K[1,1])
-            @printf(io, "#define K13_LQR    %.10f  // Ángulo Pitch\n", K[1,2])
-            @printf(io, "#define K14_LQR    %.10f  // Vel. Angular Pitch\n", K[1,3])
-            @printf(io, "#define K15_LQR    %.10f  // Ángulo Yaw\n",     0.0)
-            @printf(io, "#define K16_LQR    %.10f  // Vel. Angular Yaw\n",   K[1,4])
-            @printf(io, "#define K21_LQR    %.10f  // Posición X\n",         0.0)
-            @printf(io, "#define K22_LQR    %.10f  // Velocidad lineal V\n", K[2,1])
-            @printf(io, "#define K23_LQR    %.10f  // Ángulo Pitch\n",       K[2,2])
-            @printf(io, "#define K24_LQR    %.10f  // Vel. Angular Pitch\n", K[2,3])
-            @printf(io, "#define K25_LQR    %.10f  // Ángulo Yaw\n",         0.0)
-            @printf(io, "#define K26_LQR    %.10f  // Vel. Angular Yaw\n",   K[2,4])
-            @printf(io, "#define Ki11_LQR     %.10f  // Constante integral de velocidad \n",K[1,5])    
-            @printf(io, "#define Ki12_LQR     %.10f  // Constante integral  w_delta\n", K[1,6])   
-            @printf(io, "#define Ki21_LQR     %.10f  // Constante integral de velocidad\n", K[2,5])    
-            @printf(io, "#define Ki22_LQR     %.10f  // Constante integral w_delta\n", K[2,6])   
-            @printf(io, "#define REFPOS_LQR     %.10f  // referencia posicion x  \n", 0.0)
-            @printf(io, "#define REFYAW_LQR     %.10f  // referencia angulo yaw\n", 0.0)
-            @printf(io, "#define REFVEL_LQR   %.10f  // referencia velocidad lineal v\n", ref_vel)
-            @printf(io, "#define REFWD_LQR     %.10f  // referencia w_delta \n", ref_wd*pi/180)
-            @printf(io, "#endif /* __LQR_GAIN_H */\n")
-
-    else
-        error("modo no valido")
+        println(io)
     end
+    println(io, "#endif /* __LQR_GAIN_MODE0_H */")
+    return String(take!(io))
+end
 
+function _header_modo1(K)
+    io = IOBuffer()
+    _cabecera_c!(io, "__LQR_GAIN_MODE1_H", [
+        "lqr_gain_mode1.h - MODO 1: accion integral de velocidad lineal",
+        "ARCHIVO GENERADO AUTOMATICAMENTE DESDE JULIA (set_ss_controller)",
+        "NO EDITAR MANUALMENTE - ejecutar control_lqr_mode1.jl",
+        "",
+        "u = -(K x + Ki z),  x = [v, pitch, pitch_rate, yaw, yaw_rate]",
+        "z = integral(ref_vel - v)",
+        "Los indices Kij siguen el estado completo del modo 0 (j=2: v, ..., 6);",
+        "no hay K11/K21 porque el modo 1 no realimenta la posicion.",
+        "Sufijo _1: ganancias del modo 1 (conviven con las _0 del modo 0)",
+        "Las referencias estan en lqr_mode.h",
+    ])
+    estados = ("Velocidad lineal v", "Angulo pitch", "Vel. angular pitch",
+               "Angulo yaw", "Vel. angular yaw")
+    for (i, rueda) in enumerate(("izquierda", "derecha"))
+        println(io, "// Rueda $rueda (fila $i de K)")
+        for j in 1:5
+            _define(io, "K$(i)$(j + 1)_1_LQR", K[i, j], estados[j])
+        end
+        _define(io, "Ki$(i)_1_LQR", K[i, 6], "Integral del error de velocidad")
+        println(io)
+    end
+    println(io, "#endif /* __LQR_GAIN_MODE1_H */")
+    return String(take!(io))
+end
 
-    write(filepath, take!(io))
+function _header_modo2(K)
+    io = IOBuffer()
+    _cabecera_c!(io, "__LQR_GAIN_MODE2_H", [
+        "lqr_gain_mode2.h - MODO 2: velocidad angular de yaw (sin integral)",
+        "ARCHIVO GENERADO AUTOMATICAMENTE DESDE JULIA (set_ss_controller)",
+        "NO EDITAR MANUALMENTE - ejecutar control_lqr_mode2.jl",
+        "",
+        "u = -K (x - x_ref),  x = [x, v, pitch, pitch_rate, yaw_rate]",
+        "Los indices Kij siguen el estado completo del modo 0 (j=6: yaw_rate);",
+        "no hay K15/K25 porque el modo 2 no realimenta el angulo de yaw.",
+        "Sufijo _2: ganancias del modo 2 (conviven con las de los otros modos)",
+        "Las referencias estan en lqr_mode.h",
+    ])
+    estados = ("Posicion x", "Velocidad lineal v", "Angulo pitch",
+               "Vel. angular pitch", "Vel. angular yaw")
+    indices = (1, 2, 3, 4, 6)     # columna de K -> indice j del estado completo
+    for (i, rueda) in enumerate(("izquierda", "derecha"))
+        println(io, "// Rueda $rueda (fila $i de K)")
+        for (c, j) in enumerate(indices)
+            _define(io, "K$(i)$(j)_2_LQR", K[i, c], estados[c])
+        end
+        println(io)
+    end
+    println(io, "#endif /* __LQR_GAIN_MODE2_H */")
+    return String(take!(io))
+end
 
-    println("✅ Archivo 'lqr_gain.h' generado correctamente en:\n   Ruta: $filepath")
+function _header_modo_activo(mode, ref_pos, ref_vel, ref_yaw, ref_wd)
+    io = IOBuffer()
+    _cabecera_c!(io, "__LQR_MODE_H", [
+        "lqr_mode.h - MODO INICIAL Y REFERENCIAS",
+        "ARCHIVO GENERADO AUTOMATICAMENTE DESDE JULIA (set_ss_controller)",
+        "LQR_MODE: modo con el que arranca el robot (el ultimo programado);",
+        "en ejecucion se cambia con Set_Control_Mode() (app_control.c).",
+        "Las referencias son las mismas para todos los modos.",
+    ])
+    @printf(io, "#define LQR_MODE %d  // 0: realimentacion de estados, 1: integral de velocidad, 2: velocidad de yaw\n\n", mode)
+    println(io, "// Referencias (variables ref_pos, ref_vel, ref_yaw, ref_wd de app_control.c)")
+    _define(io, "REFPOS_LQR", ref_pos, "ref_pos: posicion x (m), modos 0 y 2")
+    _define(io, "REFVEL_LQR", ref_vel, "ref_vel: velocidad lineal (m/s), modo 1")
+    _define(io, "REFYAW_LQR", ref_yaw, "ref_yaw: angulo yaw (rad), modos 0 y 1")
+    _define(io, "REFWD_LQR", ref_wd, "ref_wd: velocidad angular yaw (rad/s), modo 2")
+    println(io, "\n#endif /* __LQR_MODE_H */")
+    return String(take!(io))
+end
+
+function write_controller(K; mode = 0, ref_pos = 0.0, ref_vel = 0.0, ref_yaw = 0.0, ref_wd = 0.0,
+                          app_dir = nothing)
+    haskey(MODOS_LQR, mode) ||
+        error("Modo $mode no válido. Modos disponibles: " *
+              join(("$k ($(MODOS_LQR[k]))" for k in sort(collect(keys(MODOS_LQR)))), ", ") * ".")
+    m_esp, n_esp = DIM_K[mode]
+    size(K) == (m_esp, n_esp) ||
+        error("En el modo $mode la matriz K debe ser $(m_esp)×$(n_esp); se recibió $(size(K, 1))×$(size(K, 2)).")
+
+    if isnothing(app_dir)
+        app_dir = normpath(joinpath(@__DIR__, "..", "APP"))
+    end
+    isdir(app_dir) || error("No se encontró la carpeta del firmware: $app_dir")
+
+    abs(ref_yaw) > 2pi &&
+        @warn "ref_yaw = $ref_yaw rad es más de una vuelta. El yaw va en radianes, como en el firmware; si lo tiene en grados use deg2rad($ref_yaw)."
+    abs(ref_wd) > 2pi &&
+        @warn "ref_wd = $ref_wd rad/s es más de una vuelta por segundo. Va en rad/s, como en el firmware; si la tiene en grados/s use deg2rad($ref_wd)."
+
+    # Se generan los textos completos antes de escribir: si algo falla,
+    # los headers existentes quedan intactos.
+    contenido = (_header_modo0, _header_modo1, _header_modo2)[mode + 1](K)
+    modo_y_refs = _header_modo_activo(mode, ref_pos, ref_vel, ref_yaw, ref_wd)
+
+    archivo_gain = joinpath(app_dir, "lqr_gain_mode$(mode).h")
+    archivo_modo = joinpath(app_dir, "lqr_mode.h")
+    write(archivo_gain, contenido)
+    write(archivo_modo, modo_y_refs)
+
+    println("✅ Modo $mode ($(MODOS_LQR[mode])) generado:")
+    println("   Ganancias:                $archivo_gain")
+    println("   Modo inicial y referencias: $archivo_modo")
+    @printf("   ref_pos = %g m, ref_vel = %g m/s, ref_yaw = %g rad, ref_wd = %g rad/s\n",
+            ref_pos, ref_vel, ref_yaw, ref_wd)
+    return archivo_gain
 end
 
 # ------------------------------------------------------------------------------
@@ -437,14 +456,19 @@ function compile_and_flash(puerto::String)
     run(cmd)
 
     println("\n✅ ¡PROCESO COMPLETADO EXITOSAMENTE!")
-    println("   LQR calculado ➔ lqr_gain.h escrito ➔ C compilado ➔ .hex generado ➔ STM32 Flasheada.")
+    println("   LQR calculado ➔ lqr_gain_mode<N>.h y lqr_mode.h escritos ➔ C compilado ➔ .hex generado ➔ STM32 Flasheada.")
 end
 
 # ------------------------------------------------------------------------------
 # 4. FUNCIÓN RECEPTORA DEL CONTROLADOR
 # ------------------------------------------------------------------------------
-function set_ss_controller(K_matrix; ref_pos = 0.0, ref_vel=0.0, ref_yaw = 0.0, ref_wd=0.0,   mode = 0)
-    write_controller(K_matrix; ref_pos, ref_vel, ref_yaw, ref_wd,  mode)
+# Modo 0: set_ss_controller(K; mode=0, ref_pos=0.0, ref_yaw=0.0)
+# Modo 1: set_ss_controller(K; mode=1, ref_vel=0.1, ref_yaw=deg2rad(0))
+# Modo 2: set_ss_controller(K; mode=2, ref_pos=0.0, ref_wd=deg2rad(10))
+# Todas las referencias se escriben siempre (lqr_mode.h): las que no use el modo
+# programado quedan listas para cuando se cambie de modo con Set_Control_Mode().
+function set_ss_controller(K_matrix; mode = 0, ref_pos = 0.0, ref_vel = 0.0, ref_yaw = 0.0, ref_wd = 0.0)
+    write_controller(K_matrix; mode, ref_pos, ref_vel, ref_yaw, ref_wd)
     puerto = find_port()
     update_tasks_com_port(puerto)
     compile_and_flash(puerto)

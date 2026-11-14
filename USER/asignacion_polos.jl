@@ -222,4 +222,4 @@ println("K6 (Vel Yaw)   = ", round(K[1,6], digits=4))
 # ==============================================================================
 
 
-set_ss_controller(K; ref_pos=0.0, ref_yaw=0.0)  
+set_ss_controller(K; mode=0, ref_pos=0.0, ref_yaw=0.0)  
