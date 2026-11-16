@@ -84,7 +84,7 @@ function update_tasks_com_port(port::String)
 end
 
 # ------------------------------------------------------------------------------
-# 2. GENERACIÓN DE C HEADERS (lqr_gain_mode0/1/2.h y lqr_mode.h)
+# 2. GENERACIÓN DE C HEADERS (lqr_gain_mode0/1/2/3.h y lqr_mode.h)
 # ------------------------------------------------------------------------------
 # Modos de control del firmware (APP/app_control.c):
 #
@@ -100,6 +100,12 @@ end
 #            x = [x, v, θ, θ̇, ψ̇],  z = ∫(ref_wd - ψ̇) dt,  u = -(K (x - x_ref) + Ki z),  K de 2×6
 #            Usa las referencias ref_pos y ref_wd
 #
+#   Modo 3 - Velocidad lineal y velocidad angular de yaw, las dos con acción
+#            integral (control_lqr_mode3.jl)
+#            x = [v, θ, θ̇, ψ̇],  z_v = ∫(ref_vel - v) dt,  z_w = ∫(ref_wd - ψ̇) dt,
+#            u = -(K (x - x_ref) + Kiv z_v + Kiw z_w),  K de 2×6
+#            Usa las referencias ref_vel y ref_wd
+#
 # Referencias: una sola de cada una, compartida por todos los modos, con el
 # mismo nombre y las mismas unidades que en app_control.c:
 #   ref_pos (m), ref_vel (m/s), ref_yaw (rad), ref_wd (rad/s)
@@ -107,21 +113,24 @@ end
 #
 # Cada vez que se programa un modo se escriben dos archivos en APP/:
 #   lqr_gain_mode<N>.h : ganancias del modo N, con sufijo _N
-#                        (K11_0_LQR, ..., K12_1_LQR, Ki1_1_LQR, ..., K16_2_LQR, Ki1_2_LQR)
-#   lqr_mode.h         : LQR_MODE (modo con el que arranca el robot) y las
-#                        referencias REFPOS_LQR, REFVEL_LQR, REFYAW_LQR, REFWD_LQR
+#                        (K11_0_LQR, ..., K12_1_LQR, Ki1_1_LQR, ..., K16_2_LQR, Ki1_2_LQR, Kiv1_3_LQR)
+#   lqr_mode.h         : LQR_MODE (modo programado) y las referencias
+#                        REFPOS_LQR, REFVEL_LQR, REFYAW_LQR, REFWD_LQR
+# Al activarse el control, el robot siempre pasa 5 s en el modo 0 (equilibrio en
+# el sitio) y después cambia a LQR_MODE (STARTUP_TIME_S en app_control.c).
 # Los headers de ganancias de los otros modos no se modifican. El firmware
 # compila siempre las ganancias de todos los modos, así que puede cambiar de
-# modo en ejecución con Set_Control_Mode(0, 1 o 2).
+# modo en ejecución con Set_Control_Mode(0 a 3).
 
 const MODOS_LQR = Dict(
     0 => "realimentación de estados",
     1 => "acción integral de velocidad lineal",
     2 => "velocidad angular de yaw con acción integral",
+    3 => "velocidad lineal y velocidad angular de yaw con acción integral",
 )
 
 # Tamaño de K que espera cada modo (columnas en el orden de su vector de estado)
-const DIM_K = Dict(0 => (2, 6), 1 => (2, 6), 2 => (2, 6))
+const DIM_K = Dict(0 => (2, 6), 1 => (2, 6), 2 => (2, 6), 3 => (2, 6))
 
 # Encabezado común de los archivos .h (solo ASCII: Keil muestra los .c/.h como GBK).
 function _cabecera_c!(io, guard, lineas)
@@ -218,21 +227,52 @@ function _header_modo2(K)
     return String(take!(io))
 end
 
+function _header_modo3(K)
+    io = IOBuffer()
+    _cabecera_c!(io, "__LQR_GAIN_MODE3_H", [
+        "lqr_gain_mode3.h - MODO 3: velocidad lineal y de yaw con integral",
+        "ARCHIVO GENERADO AUTOMATICAMENTE DESDE JULIA (set_ss_controller)",
+        "NO EDITAR MANUALMENTE - ejecutar control_lqr_mode3.jl",
+        "",
+        "u = -(K (x - x_ref) + Kiv zv + Kiw zw)",
+        "x = [v, pitch, pitch_rate, yaw_rate]",
+        "zv = integral(ref_vel - v),  zw = integral(ref_wd - yaw_rate)",
+        "Los indices Kij siguen el estado completo del modo 0 (j=2: v, ..., 6);",
+        "no hay K11/K15: el modo 3 no realimenta posicion ni angulo de yaw.",
+        "Sufijo _3: ganancias del modo 3 (conviven con las de los otros modos)",
+        "Las referencias estan en lqr_mode.h",
+    ])
+    estados = ("Velocidad lineal v", "Angulo pitch", "Vel. angular pitch", "Vel. angular yaw")
+    indices = (2, 3, 4, 6)        # columna de K -> indice j del estado completo
+    for (i, rueda) in enumerate(("izquierda", "derecha"))
+        println(io, "// Rueda $rueda (fila $i de K)")
+        for (c, j) in enumerate(indices)
+            _define(io, "K$(i)$(j)_3_LQR", K[i, c], estados[c])
+        end
+        _define(io, "Kiv$(i)_3_LQR", K[i, 5], "Integral del error de velocidad")
+        _define(io, "Kiw$(i)_3_LQR", K[i, 6], "Integral del error de vel. yaw")
+        println(io)
+    end
+    println(io, "#endif /* __LQR_GAIN_MODE3_H */")
+    return String(take!(io))
+end
+
 function _header_modo_activo(mode, ref_pos, ref_vel, ref_yaw, ref_wd)
     io = IOBuffer()
     _cabecera_c!(io, "__LQR_MODE_H", [
-        "lqr_mode.h - MODO INICIAL Y REFERENCIAS",
+        "lqr_mode.h - MODO PROGRAMADO Y REFERENCIAS",
         "ARCHIVO GENERADO AUTOMATICAMENTE DESDE JULIA (set_ss_controller)",
-        "LQR_MODE: modo con el que arranca el robot (el ultimo programado);",
-        "en ejecucion se cambia con Set_Control_Mode() (app_control.c).",
+        "LQR_MODE: modo programado. Al activarse el control el robot pasa 5 s",
+        "en el modo 0 y despues cambia a LQR_MODE (STARTUP_TIME_S).",
+        "En ejecucion se cambia con Set_Control_Mode() (app_control.c).",
         "Las referencias son las mismas para todos los modos.",
     ])
-    @printf(io, "#define LQR_MODE %d  // 0: estados, 1: integral de velocidad, 2: vel. de yaw con integral\n\n", mode)
+    @printf(io, "#define LQR_MODE %d  // 0: estados, 1: integral de velocidad, 2: vel. de yaw con integral, 3: vel. lineal y de yaw con integral\n\n", mode)
     println(io, "// Referencias (variables ref_pos, ref_vel, ref_yaw, ref_wd de app_control.c)")
     _define(io, "REFPOS_LQR", ref_pos, "ref_pos: posicion x (m), modos 0 y 2")
-    _define(io, "REFVEL_LQR", ref_vel, "ref_vel: velocidad lineal (m/s), modo 1")
+    _define(io, "REFVEL_LQR", ref_vel, "ref_vel: velocidad lineal (m/s), modos 1 y 3")
     _define(io, "REFYAW_LQR", ref_yaw, "ref_yaw: angulo yaw (rad), modos 0 y 1")
-    _define(io, "REFWD_LQR", ref_wd, "ref_wd: velocidad angular yaw (rad/s), modo 2")
+    _define(io, "REFWD_LQR", ref_wd, "ref_wd: velocidad angular yaw (rad/s), modos 2 y 3")
     println(io, "\n#endif /* __LQR_MODE_H */")
     return String(take!(io))
 end
@@ -258,7 +298,7 @@ function write_controller(K; mode = 0, ref_pos = 0.0, ref_vel = 0.0, ref_yaw = 0
 
     # Se generan los textos completos antes de escribir: si algo falla,
     # los headers existentes quedan intactos.
-    contenido = (_header_modo0, _header_modo1, _header_modo2)[mode + 1](K)
+    contenido = (_header_modo0, _header_modo1, _header_modo2, _header_modo3)[mode + 1](K)
     modo_y_refs = _header_modo_activo(mode, ref_pos, ref_vel, ref_yaw, ref_wd)
 
     archivo_gain = joinpath(app_dir, "lqr_gain_mode$(mode).h")
@@ -467,6 +507,7 @@ end
 # Modo 0: set_ss_controller(K; mode=0, ref_pos=0.0, ref_yaw=0.0)
 # Modo 1: set_ss_controller(K; mode=1, ref_vel=0.1, ref_yaw=deg2rad(0))
 # Modo 2: set_ss_controller(K; mode=2, ref_pos=0.0, ref_wd=deg2rad(10))
+# Modo 3: set_ss_controller(K; mode=3, ref_vel=0.1, ref_wd=deg2rad(10))
 # Todas las referencias se escriben siempre (lqr_mode.h): las que no use el modo
 # programado quedan listas para cuando se cambie de modo con Set_Control_Mode().
 function set_ss_controller(K_matrix; mode = 0, ref_pos = 0.0, ref_vel = 0.0, ref_yaw = 0.0, ref_wd = 0.0)

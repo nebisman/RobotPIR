@@ -72,7 +72,7 @@ sys = ss(A, B, C, D)
 
 
 Q_lqr = diagm([
-     10000.0,   # [1] Posición X (m)
+     5000.0,   # [1] Posición X (m)
      1000.0,  # [2] Velocidad lineal X (m/s)
      00.0,   # [3] Ángulo Pitch / Inclinación frontal (rad)
      200.0,  # [4] Velocidad angular Pitch (rad/s)
@@ -99,6 +99,6 @@ Klqr = lqr(sys, Q_lqr, R_lqr)
 # ==============================================================================
 # 🚀 4. DESPLIEGUE EN HARDWARE (Alt + Enter)
 # ==============================================================================
-include("lqr_pipeline.jl")
+
 
 set_ss_controller(Klqr; mode=0, ref_pos=0.0, ref_yaw=0.0)  # Despliegue del controlador LQR en hardware

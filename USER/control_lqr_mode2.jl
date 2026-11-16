@@ -106,4 +106,4 @@ Kw = lqr(Continuous, Agw, Bgw, Qw, Rw)
 # ==============================================================================
 include("lqr_pipeline.jl")
 
-set_ss_controller(Kw; mode=2, ref_pos=0.0, ref_wd=deg2rad(4))
+set_ss_controller(Kw; mode=2, ref_pos=0.0, ref_wd=deg2rad(45))
