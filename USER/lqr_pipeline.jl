@@ -130,7 +130,7 @@ const MODOS_LQR = Dict(
 )
 
 # Tamaño de K que espera cada modo (columnas en el orden de su vector de estado)
-const DIM_K = Dict(0 => (2, 6), 1 => (2, 6), 2 => (2, 6), 3 => (2, 6))
+const DIM_K = (2,6)
 
 # Encabezado común de los archivos .h (solo ASCII: Keil muestra los .c/.h como GBK).
 function _cabecera_c!(io, guard, lineas)
@@ -282,7 +282,7 @@ function write_controller(K; mode = 0, ref_pos = 0.0, ref_vel = 0.0, ref_yaw = 0
     haskey(MODOS_LQR, mode) ||
         error("Modo $mode no válido. Modos disponibles: " *
               join(("$k ($(MODOS_LQR[k]))" for k in sort(collect(keys(MODOS_LQR)))), ", ") * ".")
-    m_esp, n_esp = DIM_K[mode]
+    m_esp, n_esp = DIM_K
     size(K) == (m_esp, n_esp) ||
         error("En el modo $mode la matriz K debe ser $(m_esp)×$(n_esp); se recibió $(size(K, 1))×$(size(K, 2)).")
 
